@@ -155,7 +155,7 @@ class ProductivityAgent:
         tool_calls_executed = []
         reply = ""
 
-        # 0. Numbered Menu Selections
+        # 1. Numbered Menu Selections
         if clean_msg in ("1", "option 1", "opt 1") or clean_msg.startswith("1 "):
             sales = get_daily_sales_summary(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "get_daily_sales_summary", "args": {"tenant_id": tenant_id}, "result": sales})
@@ -168,7 +168,7 @@ class ProductivityAgent:
                 for item in sales["top_selling_products"]:
                     reply += f"- `{item['sku']}` {item['name']}: **{item['units_sold']} units** (${item['total_revenue']:.2f})\n"
 
-        elif clean_msg in ("2", "option 2", "opt 2") or clean_msg.startswith("2 ") or clean_msg in ("stock", "inventory", "low stock", "alerts"):
+        elif clean_msg in ("2", "option 2", "opt 2") or clean_msg.startswith("2 "):
             inv = get_inventory_alerts(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "get_inventory_alerts", "args": {"tenant_id": tenant_id}, "result": inv})
             if inv["low_stock_count"] == 0:
@@ -217,8 +217,54 @@ class ProductivityAgent:
             tool_calls_executed.append({"tool": "trigger_operational_webhook_alert", "args": {"channel": "slack", "tenant_id": tenant_id}, "result": webhook_res})
             reply = f"🚀 **Webhook Dispatched [{tenant_id}]:** Alert sent to **#slack**."
 
-        # Reorder Stock
-        elif "reorder" in msg or "restock" in msg:
+        # 2. Demand Forecasting & Velocity (High priority keyword match)
+        elif any(k in msg for k in ["forecast", "demand", "velocity", "stockout risk", "predict", "future sales"]):
+            forecast_data = forecast_sales_demand(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "forecast_sales_demand", "args": {"tenant_id": tenant_id}, "result": forecast_data})
+            reply = f"📈 **Demand Forecast & Stockout Velocity [{tenant_id}]**\n\n"
+            for f in forecast_data["forecasts"][:5]:
+                risk_badge = "🔴 High Risk" if f["stockout_risk"] == "HIGH" else ("🟡 Medium Risk" if f["stockout_risk"] == "MEDIUM" else "🟢 Stable")
+                reply += f"- **{f['name']}** (`{f['sku']}`): Stock: **{f['current_stock']}** | Velocity: ~{f['daily_velocity']}/day | Stockout In: **~{f['days_until_stockout']} days** ({risk_badge})\n"
+
+        # 3. Customer Reviews & Feedback
+        elif any(k in msg for k in ["review", "feedback", "rating", "satisfaction", "sentiment", "customer sentiment"]):
+            feedback_data = analyze_customer_feedback(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "analyze_customer_feedback", "args": {"tenant_id": tenant_id}, "result": feedback_data})
+            reply = f"⭐ **Customer Sentiment & Feedback [{tenant_id}]**\n"
+            reply += f"- **Average Rating:** {feedback_data['average_rating']}/5.0 ({feedback_data['satisfaction_rate']} positive satisfaction)\n"
+            reply += f"- **Summary:** {feedback_data.get('summary', 'Recent customer reviews show strong fulfillment satisfaction.')}"
+
+        # 4. Webhook Dispatch & Slack Alerts
+        elif any(k in msg for k in ["webhook", "slack", "dispatch", "send alert", "notify slack"]):
+            channel = "slack"
+            webhook_res = trigger_operational_webhook_alert(channel=channel, message=user_message, tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "trigger_operational_webhook_alert", "args": {"channel": channel, "tenant_id": tenant_id}, "result": webhook_res})
+            reply = f"🚀 **Webhook Dispatched [{tenant_id}]:** Operational alert sent to **#{channel}**."
+
+        # 5. Create / Record New Order
+        elif any(k in msg for k in ["create order", "new order", "record order", "record sale", "buying", "buys", "place order"]):
+            sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
+            sku = sku_match.group(1).upper() if sku_match else "SKU-101"
+            nums = re.findall(r"\b\d+\b", user_message)
+            qty = 1
+            if nums:
+                sku_num = sku.split("-")[-1]
+                other_nums = [int(n) for n in nums if n != sku_num]
+                if other_nums:
+                    qty = other_nums[0]
+            
+            cust_match = re.search(r"(?:for|from|client)\s+([A-Za-z0-9\s]+?)(?:\s+buying|\s+buying|\s+for|\.|$)", user_message, re.IGNORECASE)
+            customer = cust_match.group(1).strip() if cust_match else "Client"
+
+            order_res = create_sales_order(customer_name=customer, sku=sku, quantity=qty, tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "create_sales_order", "args": {"customer_name": customer, "sku": sku, "quantity": qty, "tenant_id": tenant_id}, "result": order_res})
+            if order_res.get("success"):
+                reply = f"🎉 **Order Created [{tenant_id}]:** `{order_res['order_id']}` for **{order_res['customer_name']}** ({qty}x {sku}) totaling **${order_res['total_amount']:.2f}**."
+            else:
+                reply = f"❌ **Order Failed:** {order_res.get('error', 'Error creating order')}"
+
+        # 6. Reorder & Restock Stock
+        elif any(k in msg for k in ["reorder", "restock", "purchase order", "replenish"]):
             sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
             sku = sku_match.group(1).upper() if sku_match else None
             nums = re.findall(r"\b\d+\b", user_message)
@@ -232,14 +278,14 @@ class ProductivityAgent:
                 res = reorder_inventory(sku=sku, quantity=qty, tenant_id=tenant_id)
                 tool_calls_executed.append({"tool": "reorder_inventory", "args": {"sku": sku, "quantity": qty, "tenant_id": tenant_id}, "result": res})
                 if res.get("success"):
-                    reply = f"✅ **Purchase Order Executed [{tenant_id}]:** Reordered **{res['units_ordered']} units** of **{res['product_name']}** (`{res['sku']}`). New Stock: **{res['new_stock']} units** ($`{res['total_cost']:.2f}`)."
+                    reply = f"✅ **Purchase Order Executed [{tenant_id}]:** Reordered **{res['units_ordered']} units** of **{res['product_name']}** (`{res['sku']}`). New Stock: **{res['new_stock']} units** (${res['total_cost']:.2f})."
                 else:
                     reply = f"❌ **Reorder Failed:** {res.get('error', 'Error')}"
             else:
-                reply = "Please specify SKU to reorder."
+                reply = "Please specify SKU to reorder (e.g. `Reorder 25 units of SKU-101`)."
 
-        # Daily Briefing
-        elif any(k in msg for k in ["briefing", "summary", "morning brief", "overview", "standup", "morning"]):
+        # 7. Daily Executive Briefing
+        elif any(k in msg for k in ["briefing", "morning brief", "overview", "standup", "digest"]):
             brief = generate_daily_briefing(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "generate_daily_briefing", "args": {"tenant_id": tenant_id}, "result": brief})
             sales = brief["sales_summary"]
@@ -248,16 +294,10 @@ class ProductivityAgent:
             reply = f"🌅 **Daily Executive Briefing [{tenant_id}] ({brief['briefing_date']})**\n\n"
             reply += f"**📊 Sales:** Revenue **${sales['total_revenue']:.2f}** ({sales['total_orders']} orders)\n"
             reply += f"**⚠️ Inventory:** {inv['low_stock_count']} item(s) low on stock.\n"
-            reply += f"**📋 Action Items:** {tasks['total_tasks']} pending tasks."
+            reply += f"**📋 Tasks:** {tasks['total_tasks']} action items pending."
 
-        # Sales & Revenue
-        elif any(k in msg for k in ["sale", "revenue", "order", "income", "money", "sold", "earnings"]):
-            sales = get_daily_sales_summary(tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "get_daily_sales_summary", "args": {"tenant_id": tenant_id}, "result": sales})
-            reply = f"💰 **Sales Report for [{tenant_id}] ({sales['date']})**\n- Revenue: **${sales['total_revenue']:.2f}** ({sales['total_orders']} orders, AOV: ${sales['average_order_value']:.2f})"
-
-        # Inventory & Stock
-        elif any(k in msg for k in ["inventory", "stock", "low stock", "catalog", "warehouse", "alert"]):
+        # 8. Low Stock & Inventory Thresholds
+        elif any(k in msg for k in ["inventory", "stock", "low stock", "catalog", "warehouse", "threshold", "safety stock"]):
             inv = get_inventory_alerts(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "get_inventory_alerts", "args": {"tenant_id": tenant_id}, "result": inv})
             if inv["low_stock_count"] == 0:
@@ -265,26 +305,21 @@ class ProductivityAgent:
             else:
                 reply = f"⚠️ **Low Stock Alert [{tenant_id}]: {inv['low_stock_count']} items require reordering**\n"
                 for item in inv["critical_alerts"]:
-                    reply += f"- **{item['name']}** (`{item['sku']}`): **{item['current_stock']} left**\n"
+                    reply += f"- **{item['name']}** (`{item['sku']}`): **{item['current_stock']} left** (Safe Min: {item['threshold']})\n"
 
-        # Tasks
-        elif any(k in msg for k in ["task", "todo", "schedule", "action"]):
+        # 9. Tasks & Action Items
+        elif any(k in msg for k in ["task", "todo", "schedule", "action item"]):
             tasks_data = list_daily_tasks(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "list_daily_tasks", "args": {"tenant_id": tenant_id}, "result": tasks_data})
             reply = f"📋 **Today's Operational Tasks for [{tenant_id}] ({tasks_data['total_tasks']} total)**\n"
             for t in tasks_data["tasks"]:
                 reply += f"- **[{t['priority']}]** {t['title']} ({t['status']})\n"
 
-        # Create Order
-        elif any(k in msg for k in ["create order", "new order", "record sale"]):
-            sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
-            sku = sku_match.group(1).upper() if sku_match else "SKU-101"
-            order_res = create_sales_order(customer_name="Client", sku=sku, quantity=1, tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "create_sales_order", "args": {"customer_name": "Client", "sku": sku, "quantity": 1, "tenant_id": tenant_id}, "result": order_res})
-            if order_res.get("success"):
-                reply = f"🎉 **Order Created [{tenant_id}]:** `{order_res['order_id']}` totaling **${order_res['total_amount']:.2f}**."
-            else:
-                reply = f"❌ **Order Failed:** {order_res.get('error')}"
+        # 10. Sales & Revenue Telemetry
+        elif any(k in msg for k in ["sale", "revenue", "income", "money", "sold", "earnings", "pos telemetry"]):
+            sales = get_daily_sales_summary(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "get_daily_sales_summary", "args": {"tenant_id": tenant_id}, "result": sales})
+            reply = f"💰 **Sales Report for [{tenant_id}] ({sales['date']})**\n- Revenue: **${sales['total_revenue']:.2f}** ({sales['total_orders']} orders, AOV: ${sales['average_order_value']:.2f})"
 
         # Default Help
         else:

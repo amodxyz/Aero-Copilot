@@ -89,6 +89,11 @@ def test_agent_tenant_chat():
     res_beans = agent_instance.process_message("2", tenant_id="beancrafters-cafe")
     assert "beancrafters-cafe" in res_beans["reply"]
 
+    # Test forecast prompt routing
+    res_forecast = agent_instance.process_message("Forecast sales demand and stockout risk", tenant_id="acme-electronics")
+    assert "Demand Forecast" in res_forecast["reply"]
+    assert any(tc["tool"] == "forecast_sales_demand" for tc in res_forecast["tool_calls"])
+
 
 def test_fastapi_multi_tenant_endpoints():
     """Test FastAPI REST endpoints with X-Tenant-ID header."""
