@@ -56,13 +56,23 @@ app = FastAPI(
 
 class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        for prefix in ["/api/index.py", "/api/index"]:
-            if request.scope.get("path") == prefix:
-                request.scope["path"] = "/"
+        # 1. Restore real client requested path from Vercel rewrite headers
+        for header_name in ["x-matched-path", "x-invoke-path", "x-forwarded-uri", "x-original-url", "x-rewrite-url"]:
+            val = request.headers.get(header_name)
+            if val and val not in ["/api/index.py", "/api/index", "/api/index.py/", "/api/index/"]:
+                clean_path = val.split("?")[0]
+                request.scope["path"] = clean_path
                 break
-            elif request.scope.get("path", "").startswith(prefix + "/"):
-                request.scope["path"] = request.scope["path"][len(prefix):]
-                break
+        else:
+            # 2. Fallback prefix stripping
+            for prefix in ["/api/index.py", "/api/index"]:
+                if request.scope.get("path") == prefix:
+                    request.scope["path"] = "/"
+                    break
+                elif request.scope.get("path", "").startswith(prefix + "/"):
+                    request.scope["path"] = request.scope["path"][len(prefix):]
+                    break
+
         return await call_next(request)
 
 

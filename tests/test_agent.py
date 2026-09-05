@@ -362,6 +362,16 @@ def test_vercel_routing_and_index_serving():
     assert r_css_pref.status_code == 200
     assert "text/css" in r_css_pref.headers.get("content-type", "")
 
+    # Vercel rewrite header simulation
+    r_vercel_css = client.get("/api/index.py", headers={"x-matched-path": "/static/style.css"})
+    assert r_vercel_css.status_code == 200
+    assert "text/css" in r_vercel_css.headers.get("content-type", "")
+
+    r_vercel_js = client.get("/api/index.py", headers={"x-matched-path": "/static/app.js"})
+    assert r_vercel_js.status_code == 200
+    assert "javascript" in r_vercel_js.headers.get("content-type", "")
+
+
 
 
 
