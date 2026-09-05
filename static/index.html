@@ -760,6 +760,74 @@
         </div>
     </div>
 
+    <!-- ================= FLOATING AERO OPERATIONS AGENT WIDGET ================= -->
+    <div class="aero-float-widget-container" id="aeroFloatWidgetContainer">
+        <!-- Floating Action Button (FAB Launcher) -->
+        <button class="aero-float-fab" id="btnAeroFloatFab" title="Open Aero Operations Agent" aria-label="Open Aero Operations Agent">
+            <div class="fab-glow-ring"></div>
+            <div class="fab-icon-wrapper">
+                <span class="fab-icon">⚡</span>
+                <span class="fab-status-dot" title="Aero Agent Online"></span>
+            </div>
+            <span class="fab-label-pill">Aero AI</span>
+            <span class="fab-unread-badge" id="floatUnreadBadge" style="display:none;">1</span>
+        </button>
+
+        <!-- Floating Chat Window / Flyout Card -->
+        <div class="aero-float-card" id="aeroFloatCard" style="display: none;">
+            <!-- Header -->
+            <div class="float-card-header">
+                <div class="float-header-left">
+                    <div class="float-agent-avatar">⚡</div>
+                    <div class="float-agent-info">
+                        <div class="float-agent-name">
+                            <strong>Aero Operations Agent</strong>
+                            <span class="float-status-indicator"></span>
+                        </div>
+                        <div class="float-agent-sub">
+                            <span id="floatTenantBadge" class="float-tenant-pill">beancrafters-cafe</span>
+                            <span class="float-model-tag">Gemini 2.5</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="float-header-actions">
+                    <button class="btn-float-action" id="btnFloatClearChat" title="Reset Conversation">↺</button>
+                    <button class="btn-float-action" id="btnFloatDock" title="Focus In-Page Agent Panel">⤢</button>
+                    <button class="btn-float-close" id="btnFloatClose" title="Minimize / Close Floating Agent">✕</button>
+                </div>
+            </div>
+
+            <!-- Fast Action Prompts -->
+            <div class="float-quick-actions">
+                <button class="float-chip-btn" data-prompt="Generate my daily executive morning briefing">🌅 Morning Brief</button>
+                <button class="float-chip-btn" data-prompt="Which products are low on stock?">⚠️ Low Stock</button>
+                <button class="float-chip-btn" data-prompt="Forecast sales demand and stockout risk">📈 Forecast</button>
+                <button class="float-chip-btn" data-prompt="Send morning digest to Slack">🔔 Webhook</button>
+                <button class="float-chip-btn" data-prompt="Reorder 30 units of SKU-101">⚡ Restock</button>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="float-chat-messages" id="floatChatMessages">
+                <div class="message system-msg">
+                    <div class="msg-avatar">⚡</div>
+                    <div class="msg-content">
+                        <p><strong>Aero Operations Agent Ready</strong> 🚀</p>
+                        <p class="hint-text">Ask me anything about live sales, stock, shifts, or webhook alerts across your business.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Footer -->
+            <form class="float-chat-input-area" id="floatChatForm">
+                <button type="button" class="btn-float-mic" id="btnFloatMic" title="Voice Input">🎤</button>
+                <input type="text" id="floatUserInput" placeholder="Ask Aero anything..." autocomplete="off" required>
+                <button type="submit" class="btn-float-send" id="btnFloatSend" title="Send Message">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
 </body>
 </html>

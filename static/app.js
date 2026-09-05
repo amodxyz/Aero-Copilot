@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupEventListeners();
     setupAuthListeners();
     setupSpeechRecognition();
+    setupFloatingAgentWidget();
 });
 
 function initTheme() {
@@ -362,14 +363,32 @@ function switchTenant(tenantId) {
     // Reset Chat for new tenant
     conversationHistory = [];
     const container = document.getElementById("chatMessages");
-    container.innerHTML = `
-        <div class="message system-msg">
-            <div class="msg-avatar">⚡</div>
-            <div class="msg-content">
-                <p>Switched to business tenant: <strong>[${tenantId}]</strong>. How can I assist with your operations?</p>
+    if (container) {
+        container.innerHTML = `
+            <div class="message system-msg">
+                <div class="msg-avatar">⚡</div>
+                <div class="msg-content">
+                    <p>Switched to business tenant: <strong>[${tenantId}]</strong>. How can I assist with your operations?</p>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
+
+    // Update Floating Agent widget tenant badge & messages
+    const floatBadge = document.getElementById("floatTenantBadge");
+    if (floatBadge) floatBadge.textContent = tenantId;
+
+    const floatContainer = document.getElementById("floatChatMessages");
+    if (floatContainer) {
+        floatContainer.innerHTML = `
+            <div class="message system-msg">
+                <div class="msg-avatar">⚡</div>
+                <div class="msg-content">
+                    <p>Switched to tenant <strong>[${tenantId}]</strong>. How can I assist with your operations?</p>
+                </div>
+            </div>
+        `;
+    }
 
     showToast(`Switched active tenant to ${tenantId}`, "🏢");
     refreshAllTenantData();
@@ -1388,14 +1407,9 @@ async function sendChatMessage(userMsg) {
 }
 
 function appendMessage(text, sender, extraHtml = "") {
-    const container = document.getElementById("chatMessages");
-    const div = document.createElement("div");
-    div.className = `message ${sender}-msg`;
-    
-    const avatar = sender === "user" ? "👤" : "⚡";
     const formatted = formatMarkdown(text);
-
-    div.innerHTML = `
+    const avatar = sender === "user" ? "👤" : "⚡";
+    const msgHtml = `
         <div class="msg-avatar">${avatar}</div>
         <div class="msg-content">
             ${extraHtml ? extraHtml : ''}
@@ -1403,28 +1417,71 @@ function appendMessage(text, sender, extraHtml = "") {
         </div>
     `;
 
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    // 1. In-page Main Chat Container
+    const container = document.getElementById("chatMessages");
+    if (container) {
+        const div = document.createElement("div");
+        div.className = `message ${sender}-msg`;
+        div.innerHTML = msgHtml;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 2. Floating Agent Widget Container
+    const fContainer = document.getElementById("floatChatMessages");
+    if (fContainer) {
+        const fDiv = document.createElement("div");
+        fDiv.className = `message ${sender}-msg`;
+        fDiv.innerHTML = msgHtml;
+        fContainer.appendChild(fDiv);
+        fContainer.scrollTop = fContainer.scrollHeight;
+    }
+
+    // Show unread indicator on FAB if floating chat is minimized
+    if (sender === "bot") {
+        const floatCard = document.getElementById("aeroFloatCard");
+        const unreadBadge = document.getElementById("floatUnreadBadge");
+        if (floatCard && (floatCard.style.display === "none" || !floatCard.style.display)) {
+            if (unreadBadge) unreadBadge.style.display = "flex";
+        }
+    }
 }
 
 function appendTypingIndicator() {
-    const container = document.getElementById("chatMessages");
-    const div = document.createElement("div");
-    div.className = "message bot-msg typing-indicator";
     const id = "typing-" + Date.now();
-    div.id = id;
-    div.innerHTML = `
+    const typingHtml = `
         <div class="msg-avatar">⚡</div>
         <div class="msg-content"><span class="pulse-dot"></span> Aero is analyzing [${currentTenantId}]...</div>
     `;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+
+    const container = document.getElementById("chatMessages");
+    if (container) {
+        const div = document.createElement("div");
+        div.className = "message bot-msg typing-indicator";
+        div.id = id;
+        div.innerHTML = typingHtml;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    const fContainer = document.getElementById("floatChatMessages");
+    if (fContainer) {
+        const fDiv = document.createElement("div");
+        fDiv.className = "message bot-msg typing-indicator";
+        fDiv.id = id + "-float";
+        fDiv.innerHTML = typingHtml;
+        fContainer.appendChild(fDiv);
+        fContainer.scrollTop = fContainer.scrollHeight;
+    }
+
     return id;
 }
 
 function removeTypingIndicator(id) {
-    const el = document.getElementById(id);
-    if (el) el.remove();
+    const el1 = document.getElementById(id);
+    if (el1) el1.remove();
+    const el2 = document.getElementById(id + "-float");
+    if (el2) el2.remove();
 }
 
 function formatMarkdown(text) {
@@ -1436,6 +1493,134 @@ function formatMarkdown(text) {
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
     return html;
+}
+
+// ----------------- Floating Aero Operations Agent Widget ----------------- //
+
+function setupFloatingAgentWidget() {
+    const fab = document.getElementById("btnAeroFloatFab");
+    const floatCard = document.getElementById("aeroFloatCard");
+    const btnClose = document.getElementById("btnFloatClose");
+    const btnDock = document.getElementById("btnFloatDock");
+    const btnClear = document.getElementById("btnFloatClearChat");
+    const floatForm = document.getElementById("floatChatForm");
+    const floatInput = document.getElementById("floatUserInput");
+    const floatMic = document.getElementById("btnFloatMic");
+    const unreadBadge = document.getElementById("floatUnreadBadge");
+
+    // 1. Toggle Open / Close Floating Widget
+    if (fab && floatCard) {
+        fab.addEventListener("click", () => {
+            const isHidden = floatCard.style.display === "none" || !floatCard.style.display;
+            if (isHidden) {
+                floatCard.style.display = "flex";
+                if (unreadBadge) unreadBadge.style.display = "none";
+                const floatBadge = document.getElementById("floatTenantBadge");
+                if (floatBadge) floatBadge.textContent = currentTenantId;
+                setTimeout(() => {
+                    if (floatInput) floatInput.focus();
+                    const fContainer = document.getElementById("floatChatMessages");
+                    if (fContainer) fContainer.scrollTop = fContainer.scrollHeight;
+                }, 50);
+            } else {
+                floatCard.style.display = "none";
+            }
+        });
+    }
+
+    // 2. Close / Minimize Button
+    if (btnClose && floatCard) {
+        btnClose.addEventListener("click", () => {
+            floatCard.style.display = "none";
+        });
+    }
+
+    // 3. Dock Button (Scroll to In-Page Main Agent Panel)
+    if (btnDock && floatCard) {
+        btnDock.addEventListener("click", () => {
+            floatCard.style.display = "none";
+            const agentPanel = document.querySelector(".agent-panel");
+            if (agentPanel) {
+                agentPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            const mainInput = document.getElementById("userInput");
+            if (mainInput) mainInput.focus();
+            showToast("Focused Main In-Page Copilot Panel", "⚡");
+        });
+    }
+
+    // 4. Clear Floating Chat Button
+    if (btnClear) {
+        btnClear.addEventListener("click", () => {
+            conversationHistory = [];
+            const resetHtml = `
+                <div class="message system-msg">
+                    <div class="msg-avatar">⚡</div>
+                    <div class="msg-content">
+                        <p><strong>Chat reset.</strong> How can I assist with your operations in [${currentTenantId}]?</p>
+                    </div>
+                </div>
+            `;
+            const container = document.getElementById("chatMessages");
+            if (container) container.innerHTML = resetHtml;
+            const fContainer = document.getElementById("floatChatMessages");
+            if (fContainer) fContainer.innerHTML = resetHtml;
+            showToast("Conversation cleared", "↺");
+        });
+    }
+
+    // 5. Floating Chat Form Submit
+    if (floatForm) {
+        floatForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!floatInput) return;
+            const msg = floatInput.value.trim();
+            if (!msg) return;
+            floatInput.value = "";
+            await sendChatMessage(msg);
+        });
+    }
+
+    // 6. Floating Fast Action Prompt Chips
+    document.querySelectorAll(".float-chip-btn").forEach(chip => {
+        chip.addEventListener("click", () => {
+            const prompt = chip.getAttribute("data-prompt");
+            if (prompt) sendChatMessage(prompt);
+        });
+    });
+
+    // 7. Floating Voice Input
+    if (floatMic) {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            floatMic.style.display = "none";
+        } else {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const floatRecog = new SpeechRecognition();
+            floatRecog.continuous = false;
+            floatRecog.interimResults = false;
+            floatRecog.lang = 'en-US';
+
+            floatMic.addEventListener("click", () => {
+                if (floatMic.classList.contains("listening")) {
+                    floatRecog.stop();
+                } else {
+                    floatRecog.start();
+                    floatMic.classList.add("listening");
+                    showToast("Listening... speak your request", "🎤");
+                }
+            });
+
+            floatRecog.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                if (floatInput) floatInput.value = transcript;
+                floatMic.classList.remove("listening");
+                sendChatMessage(transcript);
+            };
+
+            floatRecog.onerror = () => floatMic.classList.remove("listening");
+            floatRecog.onend = () => floatMic.classList.remove("listening");
+        }
+    }
 }
 
 // ----------------- Reorder Modal & Actions ----------------- //

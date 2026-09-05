@@ -2658,3 +2658,406 @@ body.light-theme .top-nav {
         width: 100%;
     }
 }
+
+/* ==============================================================================
+   Aero Operations Agent — Floating Icon Widget & Chat Drawer
+   ============================================================================== */
+
+.aero-float-widget-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+
+.aero-float-fab,
+.aero-float-card {
+    pointer-events: auto;
+}
+
+/* Floating Action Button (FAB Launcher) */
+.aero-float-fab {
+    position: relative;
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0.65rem 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4), 0 0 20px rgba(99, 102, 241, 0.25);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    user-select: none;
+}
+
+.aero-float-fab:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 12px 30px rgba(14, 165, 233, 0.55), 0 0 25px rgba(99, 102, 241, 0.4);
+}
+
+.aero-float-fab:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.fab-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+}
+
+.fab-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.fab-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    border: 2px solid #0f172a;
+    box-shadow: 0 0 8px #34d399;
+}
+
+.fab-label-pill {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.fab-unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #f87171;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #080c14;
+    box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+}
+
+/* Floating Chat Card */
+.aero-float-card {
+    width: 390px;
+    height: 540px;
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 6rem);
+    background: rgba(13, 20, 36, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: floatFlyIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: bottom right;
+}
+
+body.light-theme .aero-float-card {
+    background: rgba(255, 255, 255, 0.97);
+    border-color: rgba(2, 132, 199, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 24px rgba(2, 132, 199, 0.12);
+}
+
+@keyframes floatFlyIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.float-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0.9rem;
+    background: rgba(19, 29, 49, 0.9);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+body.light-theme .float-card-header {
+    background: rgba(241, 245, 249, 0.9);
+}
+
+.float-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.float-agent-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-gradient);
+    color: #fff;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.float-agent-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.1rem;
+}
+
+.float-agent-name {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.float-status-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    display: inline-block;
+}
+
+.float-agent-sub {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.float-tenant-pill {
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 0.05rem 0.35rem;
+    border-radius: var(--radius-xs);
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.float-model-tag {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+}
+
+.float-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-float-action,
+.btn-float-close {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-float-action:hover {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-float-close:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: var(--danger-bg);
+}
+
+/* Quick Actions in Floating Widget */
+.float-quick-actions {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.float-quick-actions::-webkit-scrollbar {
+    height: 3px;
+}
+.float-quick-actions::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.float-chip-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.float-chip-btn:hover {
+    background: var(--primary-glow);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Messages Stream */
+.float-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    font-size: 0.8rem;
+}
+
+.float-chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+.float-chat-messages::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 4px;
+}
+
+/* Input Area */
+.float-chat-input-area {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-float-mic {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-float-mic:hover,
+.btn-float-mic.listening {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.float-chat-input-area input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.float-chat-input-area input:focus {
+    border-color: var(--primary);
+}
+
+.btn-float-send {
+    background: var(--primary-gradient);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-float-send:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
+/* Mobile Responsiveness for Floating Widget */
+@media (max-width: 600px) {
+    .aero-float-widget-container {
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .aero-float-card {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        height: 80vh;
+        max-height: 85vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+}
