@@ -521,6 +521,23 @@ async def serve_static_file(file_path: str):
     raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
+async def serve_favicon():
+    content = STATIC_ASSETS.get("favicon.svg") or STATIC_ASSETS.get("favicon.ico")
+    if content:
+        return Response(content=content, media_type="image/svg+xml")
+    possible_paths = [
+        os.path.join(static_dir, "favicon.svg"),
+        os.path.join(os.getcwd(), "static", "favicon.svg")
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                return Response(content=f.read(), media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 

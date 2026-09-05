@@ -371,6 +371,15 @@ def test_vercel_routing_and_index_serving():
     assert r_vercel_js.status_code == 200
     assert "javascript" in r_vercel_js.headers.get("content-type", "")
 
+    # Favicon serving
+    r_fav = client.get("/favicon.ico")
+    assert r_fav.status_code == 200
+    assert "svg" in r_fav.headers.get("content-type", "") or len(r_fav.content) > 0
+
+    r_fav_svg = client.get("/static/favicon.svg")
+    assert r_fav_svg.status_code == 200
+
+
 
 
 
