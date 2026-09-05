@@ -3,12 +3,24 @@ Multi-Tenant Database layer for Productivity Assistant Agent.
 Supports strict data isolation per tenant_id across Products, Orders, Tasks, and Audit Logs.
 """
 
+import os
+import shutil
 import sqlite3
 import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-DB_PATH = Path(__file__).parent / "operations.db"
+# On Vercel / Serverless platforms, the root directory is read-only. We use /tmp.
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or os.environ.get("NOW_REGION"):
+    DB_PATH = Path("/tmp/operations.db")
+    source_db = Path(__file__).resolve().parent / "operations.db"
+    if not DB_PATH.exists() and source_db.exists():
+        try:
+            shutil.copyfile(source_db, DB_PATH)
+        except Exception:
+            pass
+else:
+    DB_PATH = Path(__file__).resolve().parent / "operations.db"
 
 
 def get_db_connection() -> sqlite3.Connection:
