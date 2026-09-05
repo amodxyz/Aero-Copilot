@@ -985,8 +985,10 @@ function setupEventListeners() {
 function setupSpeechRecognition() {
     const btnMic = document.getElementById("btnMic");
     const input = document.getElementById("userInput");
+    if (!btnMic) return;
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        if (btnMic) btnMic.style.display = "none";
+        btnMic.style.display = "none";
         return;
     }
 
@@ -1008,7 +1010,7 @@ function setupSpeechRecognition() {
 
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        input.value = transcript;
+        if (input) input.value = transcript;
         btnMic.classList.remove("listening");
         sendChatMessage(transcript);
     };
