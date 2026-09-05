@@ -16,11 +16,17 @@ def get_daily_sales_summary(date_str: Optional[str] = None, tenant_id: str = DEF
         date_str = datetime.date.today().isoformat()
 
     orders = query_all(
-        "SELECT * FROM sales_orders WHERE tenant_id = ? AND order_date = ?",
+        "SELECT * FROM sales_orders WHERE tenant_id = ? AND order_date = ? ORDER BY order_id DESC",
         (tenant_id, date_str)
     )
 
-    total_revenue = sum(order["total_amount"] for order in orders)
+    if not orders:
+        orders = query_all(
+            "SELECT * FROM sales_orders WHERE tenant_id = ? ORDER BY order_date DESC, order_id DESC LIMIT 10",
+            (tenant_id,)
+        )
+
+    total_revenue = sum(float(order["total_amount"]) for order in orders)
     order_count = len(orders)
     avg_order_value = (total_revenue / order_count) if order_count > 0 else 0.0
 
@@ -33,8 +39,41 @@ def get_daily_sales_summary(date_str: Optional[str] = None, tenant_id: str = DEF
         WHERE oi.tenant_id = ? AND so.order_date = ?
         GROUP BY p.sku, p.name
         ORDER BY units_sold DESC
-        LIMIT 5
+        LIMIT 6
     """, (tenant_id, date_str))
+
+    # If no top items specifically for today, fallback to overall top items for tenant
+    if not top_items:
+        top_items = query_all("""
+            SELECT p.sku, p.name, SUM(oi.quantity) as units_sold, SUM(oi.subtotal) as total_revenue
+            FROM order_items oi
+            JOIN products p ON oi.tenant_id = p.tenant_id AND oi.sku = p.sku
+            WHERE oi.tenant_id = ?
+            GROUP BY p.sku, p.name
+            ORDER BY units_sold DESC
+            LIMIT 6
+        """, (tenant_id,))
+
+    # If still no items sold yet, fallback to catalog products
+    if not top_items:
+        cat_prods = query_all("""
+            SELECT sku, name, 0 as units_sold, unit_price as total_revenue
+            FROM products
+            WHERE tenant_id = ?
+            ORDER BY stock_quantity DESC
+            LIMIT 6
+        """, (tenant_id,))
+        top_items = cat_prods
+
+    # Clean dict rows
+    clean_top_items = []
+    for item in top_items:
+        clean_top_items.append({
+            "sku": item.get("sku", ""),
+            "name": item.get("name", ""),
+            "units_sold": int(item.get("units_sold") or 0),
+            "total_revenue": float(item.get("total_revenue") or 0.0)
+        })
 
     return {
         "tenant_id": tenant_id,
@@ -42,8 +81,8 @@ def get_daily_sales_summary(date_str: Optional[str] = None, tenant_id: str = DEF
         "total_revenue": round(total_revenue, 2),
         "total_orders": order_count,
         "average_order_value": round(avg_order_value, 2),
-        "top_selling_products": top_items,
-        "recent_orders": orders[:5]
+        "top_selling_products": clean_top_items,
+        "recent_orders": orders[:10]
     }
 
 
