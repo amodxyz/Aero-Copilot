@@ -303,6 +303,11 @@ async def add_product(req: ProductAddRequest, tid: str = Depends(resolve_tenant_
     return res
 
 
+@app.get("/api/products", tags=["Operations"])
+async def get_products(query: str = "", tid: str = Depends(resolve_tenant_id)):
+    return search_products(query, tenant_id=tid)
+
+
 @app.get("/api/briefing", tags=["Operations"])
 async def get_briefing(date: Optional[str] = None, tid: str = Depends(resolve_tenant_id)):
     return generate_daily_briefing(date, tenant_id=tid)

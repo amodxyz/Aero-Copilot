@@ -811,37 +811,71 @@ function setupEventListeners() {
     }
 
     // New Order Modal
-    const btnNewOrderOpen = document.getElementById("btnNewOrderModalOpen");
     const modalNewOrder = document.getElementById("newOrderModal");
     const btnCancelOrder = document.getElementById("btnCancelOrder");
     const btnConfirmOrder = document.getElementById("btnConfirmOrder");
 
-    if (btnNewOrderOpen && modalNewOrder) {
-        btnNewOrderOpen.addEventListener("click", async () => {
-            const select = document.getElementById("orderProductSelect");
-            if (select) {
-                select.innerHTML = "";
-                try {
-                    const res = await tenantFetch("/api/forecast");
-                    const data = await res.json();
-                    if (data.forecasts) {
-                        data.forecasts.forEach(p => {
+    async function openNewOrderModal() {
+        if (!modalNewOrder) return;
+        const select = document.getElementById("orderProductSelect");
+        if (select) {
+            select.innerHTML = '<option value="">Loading products...</option>';
+            try {
+                const res = await tenantFetch("/api/products");
+                const data = await res.json();
+                if (data.products && data.products.length > 0) {
+                    select.innerHTML = "";
+                    data.products.forEach(p => {
+                        const opt = document.createElement("option");
+                        opt.value = p.sku;
+                        opt.textContent = `${p.name} (${p.sku}) — Stock: ${p.stock_quantity} ($${p.unit_price})`;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    const resForecast = await tenantFetch("/api/forecast");
+                    const dataForecast = await resForecast.json();
+                    if (dataForecast.forecasts && dataForecast.forecasts.length > 0) {
+                        select.innerHTML = "";
+                        dataForecast.forecasts.forEach(p => {
                             const opt = document.createElement("option");
                             opt.value = p.sku;
-                            opt.textContent = `${p.name} (${p.sku}) - Stock: ${p.current_stock}`;
+                            opt.textContent = `${p.name} (${p.sku}) — Stock: ${p.current_stock}`;
                             select.appendChild(opt);
                         });
                     }
-                } catch (e) {}
+                }
+            } catch (e) {
+                console.error("Failed to load products for new order modal:", e);
+                select.innerHTML = '<option value="SKU-101">Standard Product (SKU-101)</option>';
             }
-            modalNewOrder.style.display = "flex";
-        });
+        }
+        modalNewOrder.style.display = "flex";
+        const custEl = document.getElementById("orderCustName");
+        if (custEl) custEl.focus();
     }
+
+    // Attach open handler to all New Order buttons
+    document.querySelectorAll(".btn-open-new-order, #btnNewOrderModalOpen, #btnTopNewOrder, #btnSalesNewOrder").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openNewOrderModal();
+        });
+    });
+
     if (btnCancelOrder && modalNewOrder) {
         btnCancelOrder.addEventListener("click", () => {
             modalNewOrder.style.display = "none";
         });
     }
+
+    if (modalNewOrder) {
+        modalNewOrder.addEventListener("click", (e) => {
+            if (e.target === modalNewOrder) {
+                modalNewOrder.style.display = "none";
+            }
+        });
+    }
+
     if (btnConfirmOrder && modalNewOrder) {
         btnConfirmOrder.addEventListener("click", async () => {
             const custEl = document.getElementById("orderCustName");
@@ -857,6 +891,9 @@ function setupEventListeners() {
                 return;
             }
 
+            btnConfirmOrder.disabled = true;
+            btnConfirmOrder.textContent = "Processing...";
+
             try {
                 const res = await tenantFetch("/api/orders/create", {
                     method: "POST",
@@ -867,12 +904,17 @@ function setupEventListeners() {
                 if (res.ok) {
                     showToast(`Order ${data.order_id} created ($${data.total_amount})!`, "🎉");
                     modalNewOrder.style.display = "none";
+                    if (custEl) custEl.value = "";
+                    if (qtyEl) qtyEl.value = "1";
                     refreshAllTenantData();
                 } else {
                     alert(`Order failed: ${data.detail || 'Insufficient stock'}`);
                 }
             } catch (e) {
                 alert("Failed to submit order.");
+            } finally {
+                btnConfirmOrder.disabled = false;
+                btnConfirmOrder.textContent = "Submit Order";
             }
         });
     }
