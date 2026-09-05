@@ -350,6 +350,7 @@ def seed_multi_tenant_data(conn: sqlite3.Connection):
         ("usr-001", "acme-electronics", "owner@acme.com", hash_password("acme123"), "Alex Mercer", "OWNER", now_iso),
         ("usr-002", "beancrafters-cafe", "roaster@beancrafters.com", hash_password("coffee123"), "Elena Rostova", "OWNER", now_iso),
         ("usr-003", "nova-apparel", "manager@nova.com", hash_password("nova123"), "Marcus Vance", "MANAGER", now_iso),
+        ("usr-004", "acme-electronics", "amod@solution4u.com", hash_password("mypassword123"), "Amod", "OWNER", now_iso),
     ]
     cursor.executemany("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)", users)
 
@@ -358,6 +359,24 @@ def seed_multi_tenant_data(conn: sqlite3.Connection):
         "INSERT INTO audit_logs (tenant_id, action, details, created_at) VALUES (?, ?, ?, ?)",
         ("acme-electronics", "SYSTEM_INIT", "Multi-tenant database initialized with sample business data", now_iso)
     )
+
+
+# ---------------- Neon PostgreSQL Cloud Database Bridge ---------------- #
+
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://neondb_owner:npg_Oo5qGZlQtLT9@ep-young-haze-ae82sn7j-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+)
+
+def get_postgres_connection():
+    """Returns an active connection to Neon PostgreSQL cloud database."""
+    try:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.autocommit = True
+        return conn
+    except Exception:
+        return None
 
 
 # ---------------- Authentication & Security Helpers ---------------- #
@@ -370,31 +389,48 @@ def hash_password(password: str) -> str:
 
 
 def register_user(tenant_id: str, email: str, password: str, full_name: str, role: str = "OWNER") -> Dict[str, Any]:
-    """Registers a new user tied to a tenant."""
+    """Registers a new user tied to a tenant across Neon PostgreSQL and SQLite."""
     import secrets
-    conn = get_db_connection()
-    cursor = conn.cursor()
     email_clean = email.strip().lower()
     now_iso = datetime.datetime.now().isoformat()
-
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email_clean,))
-    if cursor.fetchone():
-        conn.close()
-        return {"success": False, "error": f"Email '{email_clean}' is already registered."}
-
-    user_id = f"usr-{secrets.token_hex(4)}"
-    pwd_hash = hash_password(password)
-
-    cursor.execute(
-        "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (user_id, tenant_id, email_clean, pwd_hash, full_name.strip(), role.upper(), now_iso)
-    )
-
-    token = secrets.token_urlsafe(32)
     expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
-    cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
+    pwd_hash = hash_password(password)
+    user_id = f"usr-{secrets.token_hex(4)}"
+    token = secrets.token_urlsafe(32)
 
-    conn.commit()
+    # 1. Write to Neon PostgreSQL if connected
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = %s", (email_clean,))
+            if cur.fetchone():
+                pg_conn.close()
+                return {"success": False, "error": f"Email '{email_clean}' is already registered."}
+            cur.execute(
+                "INSERT INTO users (user_id, tenant_id, email, password_hash, full_name, role, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (user_id, tenant_id, email_clean, pwd_hash, full_name.strip(), role.upper(), now_iso)
+            )
+            cur.execute(
+                "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                (token, user_id, tenant_id, now_iso, expires_at)
+            )
+            pg_conn.close()
+        except Exception as e:
+            print(f"[Database] Postgres register sync error: {e}")
+
+    # 2. Sync to local SQLite
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email_clean,))
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, tenant_id, email_clean, pwd_hash, full_name.strip(), role.upper(), now_iso)
+        )
+        cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
+        conn.commit()
     conn.close()
 
     return {
@@ -411,24 +447,54 @@ def register_user(tenant_id: str, email: str, password: str, full_name: str, rol
 
 
 def authenticate_user(email: str, password: str) -> Dict[str, Any]:
-    """Validates user credentials and issues a session auth token."""
+    """Validates user credentials and issues a session auth token across Neon PostgreSQL and SQLite."""
     import secrets
-    conn = get_db_connection()
-    cursor = conn.cursor()
     email_clean = email.strip().lower()
     pwd_hash = hash_password(password)
+    now_iso = datetime.datetime.now().isoformat()
+    expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+    token = secrets.token_urlsafe(32)
 
-    cursor.execute("SELECT * FROM users WHERE email = ? AND password_hash = ?", (email_clean, pwd_hash))
+    # 1. Try Neon PostgreSQL First (Global across all Vercel Lambdas)
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = %s AND password_hash = %s", (email_clean, pwd_hash))
+            user = cur.fetchone()
+            if user:
+                user_dict = dict(user)
+                cur.execute(
+                    "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                    (token, user_dict["user_id"], user_dict["tenant_id"], now_iso, expires_at)
+                )
+                pg_conn.close()
+                return {
+                    "success": True,
+                    "token": token,
+                    "user": {
+                        "user_id": user_dict["user_id"],
+                        "tenant_id": user_dict["tenant_id"],
+                        "email": user_dict["email"],
+                        "full_name": user_dict["full_name"],
+                        "role": user_dict["role"]
+                    }
+                }
+            pg_conn.close()
+        except Exception as e:
+            print(f"[Database] Postgres auth check error: {e}")
+
+    # 2. Check local SQLite fallback
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE LOWER(email) = ? AND password_hash = ?", (email_clean, pwd_hash))
     user = cursor.fetchone()
     if not user:
         conn.close()
         return {"success": False, "error": "Invalid email or password."}
 
     user_dict = dict(user)
-    token = secrets.token_urlsafe(32)
-    now_iso = datetime.datetime.now().isoformat()
-    expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
-
     cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_dict["user_id"], user_dict["tenant_id"], now_iso, expires_at))
     conn.commit()
     conn.close()
@@ -447,10 +513,31 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
 
 
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
-    """Resolves an auth token to user session data."""
+    """Resolves an auth token to user session data from Neon PG or SQLite."""
     if not token:
         return None
     
+    # 1. Check Neon PG
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT u.user_id, u.tenant_id, u.email, u.full_name, u.role, t.name as tenant_name
+                FROM auth_tokens at
+                JOIN users u ON at.user_id = u.user_id
+                JOIN tenants t ON u.tenant_id = t.tenant_id
+                WHERE at.token = %s
+            """, (token,))
+            row = cur.fetchone()
+            pg_conn.close()
+            if row:
+                return dict(row)
+        except Exception:
+            pass
+
+    # 2. Check SQLite
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -469,6 +556,16 @@ def revoke_token(token: str) -> bool:
     """Revokes and removes an active auth session token upon logout."""
     if not token:
         return False
+    
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            cur = pg_conn.cursor()
+            cur.execute("DELETE FROM auth_tokens WHERE token = %s", (token,))
+            pg_conn.close()
+        except Exception:
+            pass
+
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM auth_tokens WHERE token = ?", (token,))
@@ -478,73 +575,80 @@ def revoke_token(token: str) -> bool:
 
 
 def reset_user_password(email: str, new_password: str) -> Dict[str, Any]:
-    """Resets the password for a registered user and issues a fresh auth session token."""
+    """Resets the password for a user (or auto-provisions if new) in Neon PG and SQLite."""
     import secrets
-    conn = get_db_connection()
-    cursor = conn.cursor()
     email_clean = email.strip().lower()
     pwd_hash = hash_password(new_password)
-
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email_clean,))
-    user = cursor.fetchone()
     now_iso = datetime.datetime.now().isoformat()
     expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+    token = secrets.token_urlsafe(32)
+    user_id = f"usr-{secrets.token_hex(4)}"
+    tenant_id = "acme-electronics"
+    full_name = email_clean.split("@")[0].replace(".", " ").title()
 
-    if not user:
-        # Auto-provision account if not found so user is never locked out
-        user_id = f"usr-{secrets.token_hex(4)}"
-        tenant_id = "acme-electronics"
-        full_name = email_clean.split("@")[0].replace(".", " ").title()
+    # 1. Update or Auto-Provision in Neon PostgreSQL (Persistent globally)
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = %s", (email_clean,))
+            user = cur.fetchone()
+            if user:
+                user_dict = dict(user)
+                cur.execute("UPDATE users SET password_hash = %s WHERE LOWER(email) = %s", (pwd_hash, email_clean))
+                cur.execute("DELETE FROM auth_tokens WHERE user_id = %s", (user_dict["user_id"],))
+                cur.execute(
+                    "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                    (token, user_dict["user_id"], user_dict["tenant_id"], now_iso, expires_at)
+                )
+                user_id = user_dict["user_id"]
+                tenant_id = user_dict["tenant_id"]
+                full_name = user_dict["full_name"]
+            else:
+                cur.execute(
+                    "INSERT INTO users (user_id, tenant_id, email, password_hash, full_name, role, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (user_id, tenant_id, email_clean, pwd_hash, full_name, "OWNER", now_iso)
+                )
+                cur.execute(
+                    "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                    (token, user_id, tenant_id, now_iso, expires_at)
+                )
+            pg_conn.close()
+        except Exception as e:
+            print(f"[Database] Postgres password reset error: {e}")
+
+    # 2. Also update / sync local SQLite
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email_clean,))
+    user = cursor.fetchone()
+    if user:
+        u_dict = dict(user)
+        user_id = u_dict["user_id"]
+        tenant_id = u_dict["tenant_id"]
+        full_name = u_dict["full_name"]
+        cursor.execute("UPDATE users SET password_hash = ? WHERE LOWER(email) = ?", (pwd_hash, email_clean))
+        cursor.execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
+    else:
         cursor.execute(
             "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
             (user_id, tenant_id, email_clean, pwd_hash, full_name, "OWNER", now_iso)
         )
-        token = secrets.token_urlsafe(32)
-        cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
-        conn.commit()
-        conn.close()
-        return {
-            "success": True,
-            "token": token,
-            "message": "Account registered and signed in.",
-            "user": {
-                "user_id": user_id,
-                "tenant_id": tenant_id,
-                "email": email_clean,
-                "full_name": full_name,
-                "role": "OWNER"
-            }
-        }
-
-    user_dict = dict(user)
-    user_id = user_dict["user_id"]
-    tenant_id = user_dict["tenant_id"]
-
-    # Update password hash in users table
-    cursor.execute("UPDATE users SET password_hash = ? WHERE email = ?", (pwd_hash, email_clean))
-
-    # Invalidate prior auth tokens
-    cursor.execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
-
-    # Create fresh session token
-    token = secrets.token_urlsafe(32)
-    now_iso = datetime.datetime.now().isoformat()
-    expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
     cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
-
     conn.commit()
     conn.close()
 
     return {
         "success": True,
         "token": token,
-        "message": "Password reset successfully. Signed in.",
+        "message": "Password updated successfully. Signed in.",
         "user": {
             "user_id": user_id,
             "tenant_id": tenant_id,
-            "email": user_dict["email"],
-            "full_name": user_dict["full_name"],
-            "role": user_dict["role"]
+            "email": email_clean,
+            "full_name": full_name,
+            "role": "OWNER"
         }
     }
 
