@@ -324,3 +324,30 @@ def test_sales_and_inventory_connectors():
     assert "total_products" in inv_report
 
 
+def test_vercel_routing_and_index_serving():
+    """Test Vercel serverless prefix rewrites and HTML landing page serving."""
+    client = TestClient(app)
+
+    # Root route
+    r_root = client.get("/")
+    assert r_root.status_code == 200
+    assert "Aero Copilot" in r_root.text or "text/html" in r_root.headers.get("content-type", "")
+
+    # Vercel function path rewrite aliases
+    r_vercel1 = client.get("/api/index.py")
+    assert r_vercel1.status_code == 200
+
+    r_vercel2 = client.get("/api/index")
+    assert r_vercel2.status_code == 200
+
+    r_vercel3 = client.get("/api")
+    assert r_vercel3.status_code == 200
+
+    # Prefix stripping on API routes
+    r_api = client.get("/api/index.py/api/tenants")
+    assert r_api.status_code == 200
+    assert len(r_api.json()) > 0
+
+
+
+

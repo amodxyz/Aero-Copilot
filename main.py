@@ -9,10 +9,11 @@ import uvicorn
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Header, Depends, Query, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import FastAPI, HTTPException, Header, Depends, Query, Response, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from database import init_db, list_all_tenants, create_tenant, register_user, authenticate_user, verify_token, revoke_token
 from agent import agent_instance
@@ -53,6 +54,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        for prefix in ["/api/index.py", "/api/index"]:
+            if request.scope.get("path") == prefix:
+                request.scope["path"] = "/"
+                break
+            elif request.scope.get("path", "").startswith(prefix + "/"):
+                request.scope["path"] = request.scope["path"][len(prefix):]
+                break
+        return await call_next(request)
+
+
+app.add_middleware(VercelPathCorrectionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -470,11 +484,15 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 @app.get("/", include_in_schema=False)
+@app.get("/api/index.py", include_in_schema=False)
+@app.get("/api/index", include_in_schema=False)
+@app.get("/api", include_in_schema=False)
 async def serve_index():
     index_file = os.path.join(static_dir, "index.html")
     if os.path.exists(index_file):
-        return FileResponse(index_file)
-    return {"message": "Multi-Tenant Productivity Agent API is active."}
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), status_code=200)
+    return HTMLResponse(content="<h1>Multi-Tenant Productivity Agent API is active.</h1>", status_code=200)
 
 
 if __name__ == "__main__":
