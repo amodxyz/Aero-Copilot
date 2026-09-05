@@ -84,7 +84,11 @@ class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
                         request.scope["path"] = request.scope["path"][len(prefix):]
                         break
 
-        return await call_next(request)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
 
 app.add_middleware(VercelPathCorrectionMiddleware)

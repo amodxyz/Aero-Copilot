@@ -1598,6 +1598,10 @@ body.light-theme .top-nav {
     color: var(--warning) !important;
 }
 
+.stock-healthy {
+    color: var(--success) !important;
+}
+
 .stock-unit {
     font-size: 0.72rem;
     color: var(--text-dim);

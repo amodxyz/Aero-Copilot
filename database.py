@@ -657,36 +657,31 @@ def reset_user_password(email: str, new_password: str) -> Dict[str, Any]:
 
 def create_tenant(tenant_id: str, name: str, industry: str = "General Retail", currency: str = "USD") -> Dict[str, Any]:
     """Registers a new business tenant with initial sample inventory."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
     tid_clean = tenant_id.strip().lower().replace(" ", "-")
     now_iso = datetime.datetime.now().isoformat()
 
-    cursor.execute("SELECT * FROM tenants WHERE tenant_id = ?", (tid_clean,))
-    if cursor.fetchone():
-        conn.close()
+    existing = query_one("SELECT * FROM tenants WHERE tenant_id = ?", (tid_clean,))
+    if existing:
         return {"success": False, "error": f"Tenant '{tid_clean}' already exists."}
 
-    cursor.execute("INSERT INTO tenants VALUES (?, ?, ?, ?, ?)", (tid_clean, name.strip(), industry.strip(), currency, now_iso))
+    execute_mutation("INSERT INTO tenants VALUES (?, ?, ?, ?, ?)", (tid_clean, name.strip(), industry.strip(), currency, now_iso))
     
     # Add initial starter product for new tenant
-    cursor.execute(
+    execute_mutation(
         "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (tid_clean, "SKU-001", "Starter Flagship Product", "General", 25, 10, 49.99, 20.00, now_iso)
     )
 
-    cursor.execute(
+    execute_mutation(
         "INSERT INTO daily_tasks (tenant_id, title, priority, due_date, status, assigned_to) VALUES (?, ?, ?, ?, ?, ?)",
         (tid_clean, "Review initial product catalog & configure restock thresholds", "HIGH", datetime.date.today().isoformat(), "PENDING", "Business Owner")
     )
 
-    cursor.execute(
+    execute_mutation(
         "INSERT INTO audit_logs (tenant_id, action, details, created_at) VALUES (?, ?, ?, ?)",
         (tid_clean, "TENANT_CREATED", f"Created tenant {name} ({tid_clean})", now_iso)
     )
 
-    conn.commit()
-    conn.close()
     return {"success": True, "tenant_id": tid_clean, "name": name, "industry": industry}
 
 
@@ -696,13 +691,11 @@ def list_all_tenants() -> List[Dict[str, Any]]:
 
 def create_order_with_items(tenant_id: str, customer_name: str, items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Creates an order strictly isolated to a tenant."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
     today_iso = datetime.date.today().isoformat()
     now_iso = datetime.datetime.now().isoformat()
     
-    cursor.execute("SELECT COUNT(*) FROM sales_orders WHERE tenant_id = ?", (tenant_id,))
-    count = cursor.fetchone()[0]
+    count_row = query_one("SELECT COUNT(*) as cnt FROM sales_orders WHERE tenant_id = ?", (tenant_id,))
+    count = count_row["cnt"] if count_row else 0
     order_id = f"ORD-{5000 + count + 1}"
 
     total_amount = 0.0
@@ -712,27 +705,24 @@ def create_order_with_items(tenant_id: str, customer_name: str, items: List[Dict
         sku = item["sku"].strip().upper()
         qty = int(item["quantity"])
         
-        cursor.execute("SELECT * FROM products WHERE tenant_id = ? AND sku = ?", (tenant_id, sku))
-        prod = cursor.fetchone()
+        prod = query_one("SELECT * FROM products WHERE tenant_id = ? AND sku = ?", (tenant_id, sku))
         if not prod:
-            conn.close()
             return {"success": False, "error": f"Product SKU '{sku}' not found in your tenant catalog."}
         
         if prod["stock_quantity"] < qty:
-            conn.close()
             return {"success": False, "error": f"Insufficient stock for {prod['name']} (Only {prod['stock_quantity']} left)."}
 
-        unit_price = prod["unit_price"]
+        unit_price = float(prod["unit_price"])
         subtotal = round(unit_price * qty, 2)
         total_amount += subtotal
 
-        cursor.execute(
+        execute_mutation(
             "INSERT INTO order_items (tenant_id, order_id, sku, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?, ?)",
             (tenant_id, order_id, sku, qty, unit_price, subtotal)
         )
 
         new_stock = prod["stock_quantity"] - qty
-        cursor.execute(
+        execute_mutation(
             "UPDATE products SET stock_quantity = ? WHERE tenant_id = ? AND sku = ?",
             (new_stock, tenant_id, sku)
         )
@@ -746,18 +736,15 @@ def create_order_with_items(tenant_id: str, customer_name: str, items: List[Dict
         })
 
     total_amount = round(total_amount, 2)
-    cursor.execute(
+    execute_mutation(
         "INSERT INTO sales_orders VALUES (?, ?, ?, ?, ?, ?, ?)",
         (tenant_id, order_id, today_iso, customer_name, total_amount, "PAID", "PROCESSING")
     )
 
-    cursor.execute(
+    execute_mutation(
         "INSERT INTO audit_logs (tenant_id, action, details, created_at) VALUES (?, ?, ?, ?)",
         (tenant_id, "CREATE_ORDER", f"Created order {order_id} for {customer_name} (${total_amount})", now_iso)
     )
-
-    conn.commit()
-    conn.close()
 
     return {
         "success": True,

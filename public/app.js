@@ -902,9 +902,16 @@ function setupEventListeners() {
                 if (res.ok) {
                     showToast(`Product ${name} added to ${currentTenantId}!`, "📦");
                     modalAddProd.style.display = "none";
-                    fetchInventory();
-                    fetchForecast();
-                    fetchDashboardMetrics();
+                    if (nameEl) nameEl.value = "";
+                    if (skuEl) skuEl.value = "";
+                    if (catEl) catEl.value = "";
+                    if (stockEl) stockEl.value = "20";
+                    if (threshEl) threshEl.value = "10";
+                    if (priceEl) priceEl.value = "";
+                    if (costEl) costEl.value = "";
+                    await fetchInventory();
+                    await fetchForecast();
+                    await fetchDashboardMetrics();
                 } else {
                     alert(`Error: ${data.detail || 'Could not add product'}`);
                 }
@@ -1180,7 +1187,35 @@ async function fetchInventory() {
         const res = await tenantFetch("/api/inventory/status");
         const data = await res.json();
         cachedInventoryAlerts = data.critical_alerts || [];
-        cachedAllInventory = data.all_products && data.all_products.length > 0 ? data.all_products : (data.critical_alerts || []);
+        
+        let allProds = (data.all_products && data.all_products.length > 0) ? data.all_products : [];
+        if (!allProds || allProds.length === 0) {
+            try {
+                const pRes = await tenantFetch("/api/products");
+                const pData = await pRes.json();
+                if (pData && pData.products && pData.products.length > 0) {
+                    allProds = pData.products.map(p => {
+                        const isCrit = p.stock_quantity <= 5;
+                        const isWarn = p.stock_quantity <= p.low_stock_threshold;
+                        return {
+                            sku: p.sku,
+                            name: p.name,
+                            category: p.category || 'General',
+                            current_stock: p.stock_quantity,
+                            threshold: p.low_stock_threshold,
+                            unit_price: p.unit_price,
+                            cost_price: p.cost_price,
+                            severity: isCrit ? 'CRITICAL' : (isWarn ? 'WARNING' : 'HEALTHY'),
+                            is_low_stock: isWarn,
+                            recommended_reorder: Math.max(20, (p.low_stock_threshold * 2) - p.stock_quantity)
+                        };
+                    });
+                }
+            } catch (e) {
+                console.warn("Fallback product fetch warning:", e);
+            }
+        }
+        cachedAllInventory = allProds.length > 0 ? allProds : (data.critical_alerts || []);
 
         // Populate Category Filter dropdown from all items
         populateCategoryFilter(cachedAllInventory);

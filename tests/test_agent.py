@@ -74,11 +74,13 @@ def test_tenant_scoped_reorder():
 
 def test_tenant_creation():
     """Test registering a brand new tenant."""
-    new_tenant = create_tenant("skyline-logistics", "Skyline Logistics", "Freight & Transport")
+    import time
+    tid = f"skyline-logistics-{int(time.time() * 1000)}"
+    new_tenant = create_tenant(tid, "Skyline Logistics", "Freight & Transport")
     assert new_tenant["success"] is True
 
     tenants = list_all_tenants()
-    assert any(t["tenant_id"] == "skyline-logistics" for t in tenants)
+    assert any(t["tenant_id"] == tid for t in tenants)
 
 
 def test_agent_tenant_chat():
@@ -140,73 +142,75 @@ def test_fastapi_multi_tenant_endpoints():
 def test_user_authentication_flow():
     """Test login, registration, password hashing, and token verification."""
     client = TestClient(app)
+    import time
+    unique_ts = int(time.time() * 1000)
+    test_user_email = f"testuser_{unique_ts}@example.com"
 
-    # 1. Login with valid seed user
-    login_resp = client.post("/api/auth/login", json={
-        "email": "owner@acme.com",
-        "password": "acme123"
+    # 1. Register a new user
+    reg_resp = client.post("/api/auth/register", json={
+        "email": test_user_email,
+        "password": "initialPassword123!",
+        "full_name": "Test User",
+        "tenant_id": "acme-electronics",
+        "role": "OWNER"
     })
-    assert login_resp.status_code == 200
-    login_data = login_resp.json()
-    assert "token" in login_data
-    assert login_data["user"]["email"] == "owner@acme.com"
-    token = login_data["token"]
+    assert reg_resp.status_code == 200
+    reg_data = reg_resp.json()
+    assert "token" in reg_data
+    assert reg_data["user"]["email"] == test_user_email
+    token = reg_data["token"]
 
     # 2. Access /api/auth/me with Bearer token
     me_resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me_resp.status_code == 200
-    assert me_resp.json()["full_name"] == "Alex Mercer"
+    assert me_resp.json()["full_name"] == "Test User"
     assert me_resp.json()["role"] == "OWNER"
 
     # 3. Reject invalid password
     bad_login = client.post("/api/auth/login", json={
-        "email": "owner@acme.com",
+        "email": test_user_email,
         "password": "wrongpassword"
     })
     assert bad_login.status_code == 401
 
-    # 4. Register a new user
-    reg_resp = client.post("/api/auth/register", json={
-        "email": "newmanager@beancrafters.com",
-        "password": "securepass123",
-        "full_name": "Jordan Lee",
-        "tenant_id": "beancrafters-cafe",
-        "role": "MANAGER"
+    # 4. Login with valid password
+    login_resp = client.post("/api/auth/login", json={
+        "email": test_user_email,
+        "password": "initialPassword123!"
     })
-    assert reg_resp.status_code == 200
-    assert "token" in reg_resp.json()
-    assert reg_resp.json()["user"]["role"] == "MANAGER"
+    assert login_resp.status_code == 200
+    assert "token" in login_resp.json()
+    login_token = login_resp.json()["token"]
 
     # 5. Logout and revoke token
-    logout_resp = client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token}"})
+    logout_resp = client.post("/api/auth/logout", headers={"Authorization": f"Bearer {login_token}"})
     assert logout_resp.status_code == 200
     assert logout_resp.json()["success"] is True
 
     # 6. Verify revoked token is now rejected by /api/auth/me
-    revoked_me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    revoked_me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {login_token}"})
     assert revoked_me.status_code == 401
 
     # 7. Reset password flow
     reset_resp = client.post("/api/auth/reset-password", json={
-        "email": "owner@acme.com",
+        "email": test_user_email,
         "new_password": "NewSecretPass456!"
     })
     assert reset_resp.status_code == 200
     assert "token" in reset_resp.json()
-    new_token = reset_resp.json()["token"]
 
     # 8. Login with newly updated password
     new_login = client.post("/api/auth/login", json={
-        "email": "owner@acme.com",
+        "email": test_user_email,
         "password": "NewSecretPass456!"
     })
     assert new_login.status_code == 200
-    assert new_login.json()["user"]["email"] == "owner@acme.com"
+    assert new_login.json()["user"]["email"] == test_user_email
 
     # 9. Verify old password is now rejected
     old_login = client.post("/api/auth/login", json={
-        "email": "owner@acme.com",
-        "password": "acme123"
+        "email": test_user_email,
+        "password": "initialPassword123!"
     })
     assert old_login.status_code == 401
 
@@ -402,10 +406,15 @@ def test_vercel_routing_and_index_serving():
 def test_product_add_and_retrieval_flow():
     """Test adding new products via direct API, root serverless POST, and agent."""
     client = TestClient(app)
+    import time
+    base_ts = int(time.time() * 1000) % 100000
+    sku1 = f"SKU-T{base_ts}"
+    sku2 = f"SKU-U{base_ts}"
+    sku3 = f"SKU-V{base_ts}"
 
     # 1. Add product via /api/products/add
     res1 = client.post("/api/products/add", json={
-        "sku": "SKU-901",
+        "sku": sku1,
         "name": "Wireless Charging Mouse Pad",
         "category": "Accessories",
         "stock_quantity": 40,
@@ -415,17 +424,17 @@ def test_product_add_and_retrieval_flow():
     }, headers={"X-Tenant-ID": "acme-electronics"})
     assert res1.status_code == 200
     assert res1.json()["success"] is True
-    assert res1.json()["sku"] == "SKU-901"
+    assert res1.json()["sku"] == sku1
 
     # 2. Verify retrieval in /api/products
     list_res = client.get("/api/products", headers={"X-Tenant-ID": "acme-electronics"})
     assert list_res.status_code == 200
     skus = [p["sku"] for p in list_res.json()["products"]]
-    assert "SKU-901" in skus
+    assert sku1 in skus
 
     # 3. Add product via root POST /api/index.py (serverless fallback)
     res_root = client.post("/api/index.py", json={
-        "sku": "SKU-902",
+        "sku": sku2,
         "name": "Bluetooth Mechanical Numpad",
         "category": "Peripherals",
         "stock_quantity": 25,
@@ -438,14 +447,14 @@ def test_product_add_and_retrieval_flow():
 
     # 4. Verify duplicate SKU rejection
     dup_res = client.post("/api/products/add", json={
-        "sku": "SKU-901",
+        "sku": sku1,
         "name": "Duplicate Pad"
     }, headers={"X-Tenant-ID": "acme-electronics"})
     assert dup_res.status_code == 400
 
     # 5. Add product via agent rule engine
-    agent_res = agent_instance.process_message("Add product SKU-903 Smart RGB Lightstrip", tenant_id="acme-electronics")
-    assert "SKU-903" in agent_res["reply"]
+    agent_res = agent_instance.process_message(f"Add product {sku3} Smart RGB Lightstrip", tenant_id="acme-electronics")
+    assert sku3 in agent_res["reply"]
     assert any(tc["tool"] == "add_new_product" for tc in agent_res["tool_calls"])
 
 
