@@ -445,8 +445,8 @@
                     <div class="tab-content active" id="tab-inventory">
                         <div class="tab-header-actions">
                             <div>
-                                <h3>Critical Stock Watchlist</h3>
-                                <p class="tab-subtitle">Real-time inventory levels against safety thresholds</p>
+                                <h3>Catalog Inventory & Stock Monitor</h3>
+                                <p class="tab-subtitle">Real-time stock levels, health thresholds and catalog management</p>
                             </div>
                             <div class="header-btns">
                                 <button class="btn-sm btn-primary-sm" id="btnAddProductModalOpen">+ Add Product</button>
@@ -462,6 +462,11 @@
                             </div>
                             <select id="inventoryCategoryFilter" class="table-filter-select">
                                 <option value="ALL">All Categories</option>
+                            </select>
+                            <select id="inventoryStatusFilter" class="table-filter-select">
+                                <option value="ALL">All Stock Status</option>
+                                <option value="LOW">⚠️ Low Stock Alerts</option>
+                                <option value="HEALTHY">🟢 Healthy Stock</option>
                             </select>
                         </div>
 

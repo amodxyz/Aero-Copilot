@@ -48,36 +48,47 @@ def get_daily_sales_summary(date_str: Optional[str] = None, tenant_id: str = DEF
 
 
 def get_inventory_alerts(tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
-    """Scans the tenant catalog and returns low stock warnings."""
-    low_stock_items = query_all("""
+    """Scans the tenant catalog and returns inventory status for all products and low stock alerts."""
+    all_prods = query_all("""
         SELECT sku, name, category, stock_quantity, low_stock_threshold, unit_price, cost_price,
                (low_stock_threshold * 3 - stock_quantity) as recommended_reorder_qty
         FROM products
-        WHERE tenant_id = ? AND stock_quantity <= low_stock_threshold
+        WHERE tenant_id = ?
         ORDER BY stock_quantity ASC
     """, (tenant_id,))
 
-    prod_count_row = query_one("SELECT COUNT(*) as count FROM products WHERE tenant_id = ?", (tenant_id,))
-    all_products_count = prod_count_row["count"] if prod_count_row else 0
+    critical_alerts = []
+    all_inventory = []
+
+    for item in all_prods:
+        is_low = item["stock_quantity"] <= item["low_stock_threshold"]
+        is_critical = item["stock_quantity"] <= (item["low_stock_threshold"] // 2)
+        severity = "CRITICAL" if is_critical else ("WARNING" if is_low else "HEALTHY")
+        reorder_qty = max(item["recommended_reorder_qty"], 10) if is_low else 20
+        
+        entry = {
+            "sku": item["sku"],
+            "name": item["name"],
+            "category": item["category"] or "General",
+            "current_stock": item["stock_quantity"],
+            "threshold": item["low_stock_threshold"],
+            "unit_price": item["unit_price"],
+            "unit_cost": item["cost_price"],
+            "recommended_reorder": reorder_qty,
+            "estimated_reorder_cost": round(reorder_qty * item["cost_price"], 2),
+            "severity": severity,
+            "is_low_stock": is_low
+        }
+        all_inventory.append(entry)
+        if is_low:
+            critical_alerts.append(entry)
 
     return {
         "tenant_id": tenant_id,
-        "total_catalog_products": all_products_count,
-        "low_stock_count": len(low_stock_items),
-        "critical_alerts": [
-            {
-                "sku": item["sku"],
-                "name": item["name"],
-                "category": item["category"],
-                "current_stock": item["stock_quantity"],
-                "threshold": item["low_stock_threshold"],
-                "unit_cost": item["cost_price"],
-                "recommended_reorder": max(item["recommended_reorder_qty"], 10),
-                "estimated_reorder_cost": round(max(item["recommended_reorder_qty"], 10) * item["cost_price"], 2),
-                "severity": "CRITICAL" if item["stock_quantity"] <= (item["low_stock_threshold"] // 2) else "WARNING"
-            }
-            for item in low_stock_items
-        ]
+        "total_catalog_products": len(all_prods),
+        "low_stock_count": len(critical_alerts),
+        "all_products": all_inventory,
+        "critical_alerts": critical_alerts
     }
 
 

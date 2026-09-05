@@ -813,6 +813,13 @@ function setupEventListeners() {
         });
     }
 
+    const invStatusFilter = document.getElementById("inventoryStatusFilter");
+    if (invStatusFilter) {
+        invStatusFilter.addEventListener("change", () => {
+            renderFilteredInventory();
+        });
+    }
+
     // Forecast Search Listener
     const foreSearchInput = document.getElementById("forecastSearchInput");
     if (foreSearchInput) {
@@ -1155,6 +1162,7 @@ async function fetchDashboardMetrics() {
 }
 
 let cachedInventoryAlerts = [];
+let cachedAllInventory = [];
 let cachedForecastList = [];
 
 async function fetchInventory() {
@@ -1164,9 +1172,10 @@ async function fetchInventory() {
         const res = await tenantFetch("/api/inventory/status");
         const data = await res.json();
         cachedInventoryAlerts = data.critical_alerts || [];
+        cachedAllInventory = data.all_products && data.all_products.length > 0 ? data.all_products : (data.critical_alerts || []);
 
-        // Populate Category Filter dropdown
-        populateCategoryFilter(cachedInventoryAlerts);
+        // Populate Category Filter dropdown from all items
+        populateCategoryFilter(cachedAllInventory);
         renderFilteredInventory();
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--danger); padding: 1.5rem;">Error loading inventory telemetry.</td></tr>`;
@@ -1189,11 +1198,20 @@ function renderFilteredInventory() {
     const countLabel = document.getElementById("inventoryCountLabel");
     const searchInput = document.getElementById("inventorySearchInput");
     const catSelect = document.getElementById("inventoryCategoryFilter");
+    const statusSelect = document.getElementById("inventoryStatusFilter");
 
     const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
     const category = catSelect ? catSelect.value : "ALL";
+    const statusFilter = statusSelect ? statusSelect.value : "ALL";
 
-    let filtered = cachedInventoryAlerts.filter(item => {
+    let sourceList = cachedAllInventory;
+    if (statusFilter === "LOW") {
+        sourceList = sourceList.filter(item => item.is_low_stock || item.severity === 'CRITICAL' || item.severity === 'WARNING');
+    } else if (statusFilter === "HEALTHY") {
+        sourceList = sourceList.filter(item => item.severity === 'HEALTHY' || (!item.is_low_stock && item.severity !== 'CRITICAL' && item.severity !== 'WARNING'));
+    }
+
+    let filtered = sourceList.filter(item => {
         const matchesQuery = !query || 
             (item.sku && item.sku.toLowerCase().includes(query)) ||
             (item.name && item.name.toLowerCase().includes(query)) ||
@@ -1203,30 +1221,36 @@ function renderFilteredInventory() {
     });
 
     if (countLabel) {
-        countLabel.textContent = `Showing ${filtered.length} of ${cachedInventoryAlerts.length} watchlist items [${currentTenantId}]`;
+        countLabel.textContent = `Showing ${filtered.length} of ${cachedAllInventory.length} catalog products [${currentTenantId}]`;
     }
 
     if (!filtered || filtered.length === 0) {
-        if (cachedInventoryAlerts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--success); padding: 2rem;"><span class="status-badge status-healthy" style="font-size: 0.85rem; padding: 0.4rem 1rem;"><span class="status-indicator-dot"></span> All inventory items for [${currentTenantId}] are healthy & well-stocked</span></td></tr>`;
+        if (cachedAllInventory.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-dim); padding: 2rem;">No products registered yet. Click <strong>+ Add Product</strong> above to add your first product.</td></tr>`;
         } else {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-dim); padding: 2rem;">No items match the current search or category filter.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-dim); padding: 2rem;">No products match the selected filters.</td></tr>`;
         }
         return;
     }
 
     tbody.innerHTML = filtered.map(item => {
         const isCritical = item.severity === 'CRITICAL';
-        const statusClass = isCritical ? 'status-critical' : 'status-warning';
+        const isWarning = item.severity === 'WARNING';
+        const isHealthy = !isCritical && !isWarning;
+
+        const statusClass = isCritical ? 'status-critical' : (isWarning ? 'status-warning' : 'status-healthy');
+        const stockClass = isCritical ? 'stock-critical' : (isWarning ? 'stock-warning' : 'stock-healthy');
         const cleanName = (item.name || '').replace(/'/g, "\\'");
+        const reorderQty = item.recommended_reorder && item.recommended_reorder > 0 ? item.recommended_reorder : 20;
+
         return `
             <tr>
                 <td><span class="sku-pill">${item.sku}</span></td>
                 <td>
                     <div class="table-prod-name">${item.name}</div>
-                    <div class="table-prod-category">${item.category || 'General'}</div>
+                    <div class="table-prod-category">${item.category || 'General'} ${item.unit_price ? `• $${Number(item.unit_price).toFixed(2)}` : ''}</div>
                 </td>
-                <td><span class="stock-qty ${isCritical ? 'stock-critical' : 'stock-warning'}">${item.current_stock}</span> <span class="stock-unit">units</span></td>
+                <td><span class="stock-qty ${stockClass}">${item.current_stock}</span> <span class="stock-unit">units</span></td>
                 <td><span class="threshold-val">${item.threshold}</span> <span class="stock-unit">min</span></td>
                 <td>
                     <span class="status-badge ${statusClass}">
@@ -1235,9 +1259,9 @@ function renderFilteredInventory() {
                     </span>
                 </td>
                 <td>
-                    <button class="btn-table-reorder" onclick="openReorderModal('${item.sku}', '${cleanName}', ${item.recommended_reorder})">
+                    <button class="btn-table-reorder" onclick="openReorderModal('${item.sku}', '${cleanName}', ${reorderQty})">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                        <span>Reorder (+${item.recommended_reorder})</span>
+                        <span>${isHealthy ? `+ Restock (+${reorderQty})` : `Reorder (+${reorderQty})`}</span>
                     </button>
                 </td>
             </tr>
