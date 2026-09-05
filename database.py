@@ -769,29 +769,101 @@ def create_order_with_items(tenant_id: str, customer_name: str, items: List[Dict
     }
 
 
+def _clean_dict_row(row: Any) -> Dict[str, Any]:
+    """Cleans DB row dictionary converting Decimal and date types for JSON serialization."""
+    from decimal import Decimal
+    if not row:
+        return {}
+    d = dict(row)
+    for k, v in d.items():
+        if isinstance(v, Decimal):
+            d[k] = float(v)
+        elif isinstance(v, (datetime.date, datetime.datetime)):
+            d[k] = v.isoformat()
+    return d
+
+
 def query_all(query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    # 1. Try Neon PostgreSQL
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            pg_query = query.replace("?", "%s")
+            cur.execute(pg_query, params)
+            rows = cur.fetchall()
+            pg_conn.close()
+            return [_clean_dict_row(r) for r in rows]
+        except Exception:
+            try:
+                pg_conn.close()
+            except Exception:
+                pass
+
+    # 2. SQLite Fallback
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    return [_clean_dict_row(row) for row in rows]
 
 
 def query_one(query: str, params: tuple = ()) -> Optional[Dict[str, Any]]:
+    # 1. Try Neon PostgreSQL
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            pg_query = query.replace("?", "%s")
+            cur.execute(pg_query, params)
+            row = cur.fetchone()
+            pg_conn.close()
+            return _clean_dict_row(row) if row else None
+        except Exception:
+            try:
+                pg_conn.close()
+            except Exception:
+                pass
+
+    # 2. SQLite Fallback
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(query, params)
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    return _clean_dict_row(row) if row else None
 
 
 def execute_mutation(query: str, params: tuple = ()) -> int:
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    conn.commit()
-    rowcount = cursor.rowcount
-    conn.close()
+    rowcount = 0
+    # 1. Try Neon PostgreSQL
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            cur = pg_conn.cursor()
+            pg_query = query.replace("?", "%s")
+            cur.execute(pg_query, params)
+            rowcount = cur.rowcount
+            pg_conn.close()
+        except Exception:
+            try:
+                pg_conn.close()
+            except Exception:
+                pass
+
+    # 2. Sync to local SQLite
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        conn.commit()
+        if rowcount <= 0:
+            rowcount = cursor.rowcount
+        conn.close()
+    except Exception:
+        pass
+
     return rowcount
