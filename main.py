@@ -56,23 +56,33 @@ app = FastAPI(
 
 class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # 1. Restore real client requested path from Vercel rewrite headers
-        for header_name in ["x-matched-path", "x-invoke-path", "x-forwarded-uri", "x-original-url", "x-rewrite-url"]:
-            val = request.headers.get(header_name)
-            if val and val not in ["/api/index.py", "/api/index", "/api/index.py/", "/api/index/"]:
-                clean_path = val.split("?")[0]
-                request.scope["path"] = clean_path
-                break
+        # 1. Restore real client requested path from Vercel __path__ rewrite query parameter
+        query_params = dict(request.query_params)
+        if "__path__" in query_params:
+            real_path = query_params.pop("__path__")
+            if real_path:
+                request.scope["path"] = real_path.split("?")[0]
+            from urllib.parse import urlencode
+            new_query = urlencode(query_params)
+            request.scope["query_string"] = new_query.encode("utf-8")
         else:
-            # 2. Fallback prefix stripping
-            for prefix in ["/api/index.py", "/api/index"]:
-                if request.scope.get("path") == prefix:
-                    if request.method == "GET":
-                        request.scope["path"] = "/"
+            # 2. Restore real client requested path from Vercel rewrite headers
+            for header_name in ["x-matched-path", "x-invoke-path", "x-forwarded-uri", "x-original-url", "x-rewrite-url", "x-vercel-sc-path"]:
+                val = request.headers.get(header_name)
+                if val and val not in ["/api/index.py", "/api/index", "/api/index.py/", "/api/index/"]:
+                    clean_path = val.split("?")[0]
+                    request.scope["path"] = clean_path
                     break
-                elif request.scope.get("path", "").startswith(prefix + "/"):
-                    request.scope["path"] = request.scope["path"][len(prefix):]
-                    break
+            else:
+                # 3. Fallback prefix stripping
+                for prefix in ["/api/index.py", "/api/index"]:
+                    if request.scope.get("path") == prefix:
+                        if request.method == "GET":
+                            request.scope["path"] = "/"
+                        break
+                    elif request.scope.get("path", "").startswith(prefix + "/"):
+                        request.scope["path"] = request.scope["path"][len(prefix):]
+                        break
 
         return await call_next(request)
 
@@ -590,13 +600,6 @@ async def handle_root_post_dispatch(request: Request, header_tid: str = Depends(
     
     # 1. Chat dispatch
     if "message" in body:
-        if body.get("message") == "__debug_headers__":
-            return {
-                "headers": dict(request.headers),
-                "scope_path": request.scope.get("path"),
-                "scope_raw": str(request.scope.get("raw_path", b"")),
-                "query": request.scope.get("query_string", b"").decode("utf-8")
-            }
         req = ChatRequest(**body)
         return await chat_with_agent(req, header_tid)
     

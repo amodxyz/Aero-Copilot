@@ -6,13 +6,20 @@
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
     },
     {
-      "source": "/((?!static/).*)",
-      "destination": "/api/index.py"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py?__path__=/api/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/api/index.py?__path__=/"
+    },
+    {
+      "source": "/((?!api|static).*)",
+      "destination": "/api/index.py?__path__=/$1"
     }
   ]
 }
-

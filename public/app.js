@@ -8,7 +8,13 @@ let authToken = localStorage.getItem("aero_auth_token") || null;
 let currentUser = null;
 let conversationHistory = [];
 let salesChartInstance = null;
-let allTenantsCache = [];
+const DEFAULT_BUSINESS_TENANTS = [
+    { tenant_id: "acme-electronics", name: "Acme Electronics Co.", industry: "Electronics & Tech" },
+    { tenant_id: "beancrafters-cafe", name: "BeanCrafters Specialty Cafe", industry: "Food & Beverage" },
+    { tenant_id: "vanguard-logistics", name: "Vanguard Global Logistics", industry: "Supply Chain & Logistics" }
+];
+
+let allTenantsCache = [...DEFAULT_BUSINESS_TENANTS];
 
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
@@ -16,6 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setupAuthListeners();
     setupSpeechRecognition();
     setupFloatingAgentWidget();
+
+    // Populate registration tenant dropdown immediately
+    populateGateTenantSelect();
 
     // Async data loading in background
     fetchTenants();
@@ -169,8 +178,9 @@ function showAuthGate() {
 
 function populateGateTenantSelect() {
     const sel = document.getElementById("gateRegTenantSelect");
-    if (!sel || !allTenantsCache.length) return;
-    sel.innerHTML = allTenantsCache.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join("");
+    if (!sel) return;
+    const tenants = (allTenantsCache && allTenantsCache.length) ? allTenantsCache : DEFAULT_BUSINESS_TENANTS;
+    sel.innerHTML = tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join("");
 }
 
 function updateUserAuthUI(user) {
@@ -346,19 +356,24 @@ async function fetchTenants() {
     const select = document.getElementById("tenantSelect");
     try {
         const res = await fetch("/api/tenants");
-        const tenants = await res.json();
-        allTenantsCache = tenants;
-        if (select) {
-            select.innerHTML = tenants.map(t => `
-                <option value="${t.tenant_id}" ${t.tenant_id === currentTenantId ? 'selected' : ''}>
-                    ${t.name} (${t.tenant_id})
-                </option>
-            `).join("");
+        if (res.ok) {
+            const tenants = await res.json();
+            if (Array.isArray(tenants) && tenants.length > 0) {
+                allTenantsCache = tenants;
+            }
         }
-        populateGateTenantSelect();
     } catch (e) {
-        console.error("Failed to load tenants", e);
+        console.warn("Failed to load live tenants, using fallback defaults", e);
     }
+    
+    if (select) {
+        select.innerHTML = allTenantsCache.map(t => `
+            <option value="${t.tenant_id}" ${t.tenant_id === currentTenantId ? 'selected' : ''}>
+                ${t.name} (${t.tenant_id})
+            </option>
+        `).join("");
+    }
+    populateGateTenantSelect();
 }
 
 function switchTenant(tenantId) {
