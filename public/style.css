@@ -1994,22 +1994,32 @@ body.light-theme .top-nav {
     position: relative;
     display: flex;
     align-items: center;
+    width: 100%;
 }
 
 .input-icon {
     position: absolute;
     left: 0.85rem;
-    font-size: 0.9rem;
-    opacity: 0.6;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0.75;
     pointer-events: none;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
-.input-with-icon input {
+.input-with-icon input,
+.form-group .input-with-icon input,
+.modal-card .input-with-icon input {
     width: 100%;
     background: var(--bg-input);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
-    padding: 0.65rem 0.85rem 0.65rem 2.4rem;
+    padding: 0.65rem 0.85rem 0.65rem 2.6rem !important;
     color: var(--text-main);
     font-family: var(--font-sans);
     font-size: 0.85rem;
@@ -2017,9 +2027,11 @@ body.light-theme .top-nav {
     transition: all 0.2s ease;
 }
 
-.input-with-icon input:focus {
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px var(--primary-glow);
+.input-with-icon input:focus,
+.form-group .input-with-icon input:focus,
+.modal-card .input-with-icon input:focus {
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 2px var(--primary-glow) !important;
 }
 
 .input-with-icon input:-webkit-autofill,
@@ -2199,10 +2211,10 @@ body.light-theme .top-nav {
     color: var(--text-muted);
 }
 
-.modal-card input,
+.modal-card input:not(.input-with-icon input),
 .modal-card select,
-.form-group input,
-.form-group select {
+.form-group > input:not(.input-with-icon input),
+.form-group > select {
     width: 100%;
     background: #090f1c !important;
     border: 1px solid var(--border-subtle) !important;
@@ -2214,6 +2226,10 @@ body.light-theme .top-nav {
     outline: none;
     transition: all 0.2s ease;
     box-sizing: border-box;
+}
+
+.input-with-icon input {
+    padding-left: 2.6rem !important;
 }
 
 .modal-card input:focus,
