@@ -59,7 +59,12 @@
                         <span>Sign In to Dashboard</span>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </button>
-                    <div class="auth-card-footer">
+                    <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.75rem; justify-content:center; align-items:center;">
+                        <span style="font-size:0.73rem; color:var(--text-dim);">1-Click Sign In:</span>
+                        <button type="button" class="btn-demo-pill" onclick="window.fillLogin('amod@solution4u.com', 'mypassword123')" style="font-size:0.73rem; padding:0.25rem 0.55rem; border-radius:6px; border:1px solid rgba(56,189,248,0.35); background:rgba(56,189,248,0.12); color:#38bdf8; cursor:pointer; font-weight:600;">⚡ amod@solution4u.com</button>
+                        <button type="button" class="btn-demo-pill" onclick="window.fillLogin('owner@acme.com', 'acme123')" style="font-size:0.73rem; padding:0.25rem 0.55rem; border-radius:6px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); color:var(--text-muted); cursor:pointer;">owner@acme.com</button>
+                    </div>
+                    <div class="auth-card-footer" style="margin-top:0.75rem;">
                         <span>🔒 Strict Multi-Tenant Data Isolation & Salted Security</span>
                     </div>
                 </form>

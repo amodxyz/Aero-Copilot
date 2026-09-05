@@ -240,8 +240,16 @@ async function logoutUser(showNotification = true) {
     }
 }
 
-// Expose logoutUser globally to window
+// Expose logoutUser and fillLogin globally to window
 window.logoutUser = logoutUser;
+window.fillLogin = function(email, pwd) {
+    const e = document.getElementById("gateLoginEmail");
+    const p = document.getElementById("gateLoginPassword");
+    if (e) e.value = email;
+    if (p) p.value = pwd;
+    const btn = document.getElementById("btnGateLoginSubmit");
+    if (btn) btn.click();
+};
 
 function setupAuthListeners() {
     // 1. Gate Screen Tabs (Sign In vs Register)
