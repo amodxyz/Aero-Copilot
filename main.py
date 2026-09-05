@@ -67,7 +67,8 @@ class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
             # 2. Fallback prefix stripping
             for prefix in ["/api/index.py", "/api/index"]:
                 if request.scope.get("path") == prefix:
-                    request.scope["path"] = "/"
+                    if request.method == "GET":
+                        request.scope["path"] = "/"
                     break
                 elif request.scope.get("path", "").startswith(prefix + "/"):
                     request.scope["path"] = request.scope["path"][len(prefix):]
@@ -575,6 +576,45 @@ async def serve_index():
         return HTMLResponse(content=STATIC_ASSETS["index.html"], status_code=200)
 
     return HTMLResponse(content="<h1>Multi-Tenant Productivity Agent API is active.</h1>", status_code=200)
+
+
+@app.post("/", include_in_schema=False)
+@app.post("/api/index.py", include_in_schema=False)
+@app.post("/api/index", include_in_schema=False)
+@app.post("/api", include_in_schema=False)
+async def handle_root_post_dispatch(request: Request, header_tid: str = Depends(resolve_tenant_id)):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    # 1. Chat dispatch
+    if "message" in body:
+        req = ChatRequest(**body)
+        return await chat_with_agent(req, header_tid)
+    
+    # 2. Login dispatch
+    if "email" in body and "password" in body and "full_name" not in body:
+        req = UserLoginRequest(**body)
+        return await auth_login(req)
+        
+    # 3. Register dispatch
+    if "email" in body and "password" in body and "full_name" in body:
+        req = UserRegisterRequest(**body)
+        return await auth_register(req)
+
+    # 4. Order create dispatch
+    if "customer_name" in body and "sku" in body:
+        req = OrderCreateRequest(**body)
+        return await create_order(req, header_tid)
+
+    # 5. Inventory reorder dispatch
+    if "sku" in body and "quantity" in body:
+        req = ReorderRequest(**body)
+        return await reorder_stock(req, header_tid)
+
+    return {"status": "ok", "detail": "Dispatched serverless POST request"}
+
 
 
 if __name__ == "__main__":
