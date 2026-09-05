@@ -355,7 +355,34 @@ class ProductivityAgent:
             else:
                 reply = f"❌ **Order Failed:** {order_res.get('error', 'Error creating order')}"
 
-        # 6. Reorder & Restock Stock
+        # 6. Add / Register New Product
+        elif any(k in msg for k in ["add product", "create product", "new product", "register product"]):
+            sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
+            sku = sku_match.group(1).upper() if sku_match else f"SKU-{datetime.datetime.now().strftime('%M%S')}"
+            
+            # Extract product name
+            name_match = re.search(r"(?:product|named|name)\s+([A-Za-z0-9\s\-]+?)(?:\s+with|\s+category|\s+stock|\s+price|\.|$)", user_message, re.IGNORECASE)
+            name = name_match.group(1).strip() if name_match else f"Product {sku}"
+            if name.upper() == sku:
+                name = f"Item {sku}"
+
+            res = add_new_product(
+                sku=sku,
+                name=name,
+                category="General",
+                stock_quantity=25,
+                low_stock_threshold=10,
+                unit_price=49.99,
+                cost_price=20.00,
+                tenant_id=tenant_id
+            )
+            tool_calls_executed.append({"tool": "add_new_product", "args": {"sku": sku, "name": name, "tenant_id": tenant_id}, "result": res})
+            if res.get("success"):
+                reply = f"📦 **Product Registered [{tenant_id}]:** Added **{name}** (`{sku}`) with 25 initial units @ ${49.99:.2f}."
+            else:
+                reply = f"❌ **Product Registration Failed:** {res.get('error', 'Error adding product')}"
+
+        # 7. Reorder & Restock Stock
         elif any(k in msg for k in ["reorder", "restock", "purchase order", "replenish"]):
             sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
             sku = sku_match.group(1).upper() if sku_match else None

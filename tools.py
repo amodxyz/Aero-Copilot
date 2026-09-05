@@ -335,33 +335,66 @@ def create_sales_order(customer_name: str, sku: str, quantity: int, tenant_id: s
 def add_new_product(
     sku: str,
     name: str,
-    category: str,
-    stock_quantity: int,
-    low_stock_threshold: int,
-    unit_price: float,
-    cost_price: float,
+    category: str = "General",
+    stock_quantity: int = 25,
+    low_stock_threshold: int = 10,
+    unit_price: float = 49.99,
+    cost_price: float = 20.00,
     tenant_id: str = DEFAULT_TENANT
 ) -> Dict[str, Any]:
     """Adds a new product to the tenant's catalog."""
-    sku_clean = sku.strip().upper()
+    sku_clean = str(sku).strip().upper()
+    name_clean = str(name).strip()
+    cat_clean = str(category).strip() if category else "General"
+    
+    try:
+        stock_val = int(stock_quantity) if stock_quantity is not None else 25
+    except (ValueError, TypeError):
+        stock_val = 25
+
+    try:
+        thresh_val = int(low_stock_threshold) if low_stock_threshold is not None else 10
+    except (ValueError, TypeError):
+        thresh_val = 10
+
+    try:
+        price_val = float(unit_price) if unit_price is not None else 49.99
+    except (ValueError, TypeError):
+        price_val = 49.99
+
+    try:
+        cost_val = float(cost_price) if cost_price is not None else 20.00
+    except (ValueError, TypeError):
+        cost_val = 20.00
+
     existing = query_one("SELECT * FROM products WHERE tenant_id = ? AND sku = ?", (tenant_id, sku_clean))
     if existing:
         return {"success": False, "error": f"Product SKU '{sku_clean}' already exists in your tenant catalog."}
 
     today_iso = datetime.date.today().isoformat()
+    now_iso = datetime.datetime.now().isoformat()
+
     execute_mutation(
-        "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (tenant_id, sku_clean, name.strip(), category.strip(), stock_quantity, low_stock_threshold, unit_price, cost_price, today_iso)
+        "INSERT INTO products (tenant_id, sku, name, category, stock_quantity, low_stock_threshold, unit_price, cost_price, last_restocked_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (tenant_id, sku_clean, name_clean, cat_clean, stock_val, thresh_val, price_val, cost_val, today_iso)
+    )
+
+    execute_mutation(
+        "INSERT INTO audit_logs (tenant_id, action, details, created_at) VALUES (?, ?, ?, ?)",
+        (tenant_id, "ADD_PRODUCT", f"Added new product '{name_clean}' ({sku_clean}) with {stock_val} units @ ${price_val:.2f}", now_iso)
     )
 
     return {
         "success": True,
         "tenant_id": tenant_id,
         "sku": sku_clean,
-        "name": name,
-        "stock_quantity": stock_quantity,
-        "unit_price": unit_price,
-        "message": f"Product '{name}' ({sku_clean}) registered to {tenant_id}."
+        "name": name_clean,
+        "category": cat_clean,
+        "stock_quantity": stock_val,
+        "low_stock_threshold": thresh_val,
+        "unit_price": price_val,
+        "cost_price": cost_val,
+        "message": f"Product '{name_clean}' ({sku_clean}) registered successfully to tenant {tenant_id}."
     }
 
 

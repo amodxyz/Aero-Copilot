@@ -349,16 +349,17 @@ async def create_order(req: OrderCreateRequest, tid: str = Depends(resolve_tenan
 
 
 @app.post("/api/products/add", tags=["Operations"])
+@app.post("/api/products", tags=["Operations"])
 async def add_product(req: ProductAddRequest, tid: str = Depends(resolve_tenant_id)):
     active_tid = req.tenant_id or tid
     res = add_new_product(
         sku=req.sku,
         name=req.name,
-        category=req.category,
-        stock_quantity=req.stock_quantity,
-        low_stock_threshold=req.low_stock_threshold,
-        unit_price=req.unit_price,
-        cost_price=req.cost_price,
+        category=req.category or "General",
+        stock_quantity=req.stock_quantity if req.stock_quantity is not None else 25,
+        low_stock_threshold=req.low_stock_threshold if req.low_stock_threshold is not None else 10,
+        unit_price=req.unit_price if req.unit_price is not None else 49.99,
+        cost_price=req.cost_price if req.cost_price is not None else 20.00,
         tenant_id=active_tid
     )
     if not res.get("success"):
@@ -631,15 +632,35 @@ async def handle_root_post_dispatch(request: Request, header_tid: str = Depends(
         req = UserRegisterRequest(**body)
         return await auth_register(req)
 
-    # 4. Order create dispatch
+    # 5. Order create dispatch
     if "customer_name" in body and "sku" in body:
         req = OrderCreateRequest(**body)
         return await create_order(req, header_tid)
 
-    # 5. Inventory reorder dispatch
-    if "sku" in body and "quantity" in body:
+    # 6. Inventory reorder dispatch
+    if "sku" in body and "quantity" in body and "name" not in body:
         req = ReorderRequest(**body)
         return await reorder_stock(req, header_tid)
+
+    # 7. Product add dispatch
+    if "sku" in body and "name" in body:
+        req = ProductAddRequest(**body)
+        return await add_product(req, header_tid)
+
+    # 8. Expense log dispatch
+    if "category" in body and "amount" in body and "description" in body:
+        req = ExpenseLogRequest(**body)
+        return await log_expense_endpoint(req, header_tid)
+
+    # 9. Customer review dispatch
+    if "customer_name" in body and "feedback_text" in body:
+        req = CustomerReviewRequest(**body)
+        return await add_review_endpoint(req, header_tid)
+
+    # 10. Task create dispatch
+    if "title" in body and "priority" in body:
+        req = TaskCreateRequest(**body)
+        return await add_task(req, header_tid)
 
     return {"status": "ok", "detail": "Dispatched serverless POST request"}
 

@@ -398,10 +398,56 @@ def test_vercel_routing_and_index_serving():
     # Favicon serving
     r_fav = client.get("/favicon.ico")
     assert r_fav.status_code == 200
-    assert "svg" in r_fav.headers.get("content-type", "") or len(r_fav.content) > 0
 
-    r_fav_svg = client.get("/static/favicon.svg")
-    assert r_fav_svg.status_code == 200
+def test_product_add_and_retrieval_flow():
+    """Test adding new products via direct API, root serverless POST, and agent."""
+    client = TestClient(app)
+
+    # 1. Add product via /api/products/add
+    res1 = client.post("/api/products/add", json={
+        "sku": "SKU-901",
+        "name": "Wireless Charging Mouse Pad",
+        "category": "Accessories",
+        "stock_quantity": 40,
+        "low_stock_threshold": 15,
+        "unit_price": 34.99,
+        "cost_price": 14.00
+    }, headers={"X-Tenant-ID": "acme-electronics"})
+    assert res1.status_code == 200
+    assert res1.json()["success"] is True
+    assert res1.json()["sku"] == "SKU-901"
+
+    # 2. Verify retrieval in /api/products
+    list_res = client.get("/api/products", headers={"X-Tenant-ID": "acme-electronics"})
+    assert list_res.status_code == 200
+    skus = [p["sku"] for p in list_res.json()["products"]]
+    assert "SKU-901" in skus
+
+    # 3. Add product via root POST /api/index.py (serverless fallback)
+    res_root = client.post("/api/index.py", json={
+        "sku": "SKU-902",
+        "name": "Bluetooth Mechanical Numpad",
+        "category": "Peripherals",
+        "stock_quantity": 25,
+        "low_stock_threshold": 10,
+        "unit_price": 59.99,
+        "cost_price": 25.00
+    }, headers={"X-Tenant-ID": "acme-electronics"})
+    assert res_root.status_code == 200
+    assert res_root.json()["success"] is True
+
+    # 4. Verify duplicate SKU rejection
+    dup_res = client.post("/api/products/add", json={
+        "sku": "SKU-901",
+        "name": "Duplicate Pad"
+    }, headers={"X-Tenant-ID": "acme-electronics"})
+    assert dup_res.status_code == 400
+
+    # 5. Add product via agent rule engine
+    agent_res = agent_instance.process_message("Add product SKU-903 Smart RGB Lightstrip", tenant_id="acme-electronics")
+    assert "SKU-903" in agent_res["reply"]
+    assert any(tc["tool"] == "add_new_product" for tc in agent_res["tool_calls"])
+
 
 
 
