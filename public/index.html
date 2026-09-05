@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero Copilot — Enterprise Operations & Productivity Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Background Ambient Glow -->
+    <div class="ambient-glow top-left"></div>
+    <div class="ambient-glow top-right"></div>
+
+    <div class="app-container">
+
+        <!-- ================= SAAS AUTH GATE SCREEN (Before Login) ================= -->
+        <section id="authGateScreen" class="auth-gate-screen">
+            <div class="auth-gate-header">
+                <div class="saas-brand-badge">
+                    <span class="badge-pulse"></span> Google Cloud Run Native
+                </div>
+                <div class="logo-icon-lg">⚡</div>
+                <h1 class="auth-title">Aero <span>Copilot</span></h1>
+                <p class="auth-subtitle">Autonomous Personal Operations & Productivity Agent for Modern Business Owners</p>
+            </div>
+
+            <div class="auth-gate-card">
+                <div class="auth-tabs">
+                    <button class="tab-btn active" id="gateTabLogin">Sign In</button>
+                    <button class="tab-btn" id="gateTabRegister">Create Account</button>
+                </div>
+
+                <!-- Gate Login Form -->
+                <form id="gateLoginForm" class="auth-form-body" autocomplete="off">
+                    <div class="form-group">
+                        <label>Business Email Address</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">✉️</span>
+                            <input type="email" id="gateLoginEmail" placeholder="e.g. owner@acme.com" autocomplete="off" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="gateLoginPassword" placeholder="••••••••" autocomplete="off" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block btn-lg" id="btnGateLoginSubmit">
+                        <span>Sign In to Dashboard</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                    <div class="auth-card-footer">
+                        <span>🔒 Strict Multi-Tenant Data Isolation & Salted Security</span>
+                    </div>
+                </form>
+
+                <!-- Gate Register Form -->
+                <form id="gateRegisterForm" class="auth-form-body" autocomplete="off" style="display: none;">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="gateRegFullName" placeholder="e.g. Alex Mercer" autocomplete="off" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Work Email Address</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">✉️</span>
+                            <input type="email" id="gateRegEmail" placeholder="e.g. alex@business.com" autocomplete="off" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="gateRegPassword" placeholder="Create a secure password" autocomplete="off" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Assign to Business Tenant</label>
+                        <select id="gateRegTenantSelect" class="styled-select" required></select>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block btn-lg" id="btnGateRegisterSubmit">
+                        <span>Create Account & Enter Dashboard</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Features Highlights Grid -->
+            <div class="auth-features-ribbon">
+                <div class="feature-item">
+                    <span class="feat-icon">📊</span>
+                    <div>
+                        <strong>Live POS Telemetry</strong>
+                        <p>Stripe, Square & Shopify synchronization</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feat-icon">⚠️</span>
+                    <div>
+                        <strong>Smart Inventory AI</strong>
+                        <p>Real-time thresholds & auto-replenishment</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feat-icon">🌅</span>
+                    <div>
+                        <strong>Executive Morning Brief</strong>
+                        <p>Automated Slack, WhatsApp & Email dispatch</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feat-icon">⚡</span>
+                    <div>
+                        <strong>Cloud Scheduler Ready</strong>
+                        <p>Automated daily cron & serverless scale</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SAAS APP WORKSPACE (Shown After Login) ================= -->
+        <div id="appWorkspace" class="saas-workspace-layout hidden" style="display: none;">
+            
+            <!-- Mobile Sidebar Backdrop Overlay -->
+            <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+            <!-- SaaS Navigation Sidebar -->
+            <aside class="saas-sidebar" id="saasSidebar">
+                <!-- Sidebar Header: Brand & Collapse Toggle -->
+                <div class="sidebar-header">
+                    <div class="sidebar-brand">
+                        <div class="logo-icon">⚡</div>
+                        <div class="brand-text">
+                            <span class="brand-title">Aero <span>Copilot</span></span>
+                            <span class="saas-version-pill">v2.5 Pro</span>
+                        </div>
+                    </div>
+                    <button class="sidebar-toggle-btn" id="btnSidebarCollapse" title="Collapse / Expand Sidebar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button class="sidebar-close-mobile-btn" id="btnSidebarCloseMobile" title="Close Sidebar">✕</button>
+                </div>
+
+                <!-- Tenant Selector in Sidebar -->
+                <div class="sidebar-tenant-card">
+                    <div class="tenant-card-header">
+                        <span class="tenant-label">ACTIVE TENANT</span>
+                        <button class="btn-icon-xs" id="btnNewTenantModalOpen" title="Register New Business Tenant">+</button>
+                    </div>
+                    <div class="tenant-select-container">
+                        <span class="tenant-icon">🏢</span>
+                        <select id="tenantSelect" class="sidebar-tenant-dropdown" title="Switch active business tenant"></select>
+                    </div>
+                </div>
+
+                <!-- Navigation List -->
+                <nav class="sidebar-nav">
+                    <div class="nav-section-title">CORE OPERATIONS</div>
+                    <a href="javascript:void(0)" class="sidebar-nav-item active" data-nav-target="copilot" id="sideNavCopilot">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                        </span>
+                        <span class="nav-item-text">AI Copilot</span>
+                        <span class="nav-item-badge live-badge">Live</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-inventory" id="sideNavInventory">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        </span>
+                        <span class="nav-item-text">Inventory Monitor</span>
+                        <span class="nav-item-badge alert-badge" id="sideBadgeLowStock" style="display:none;">0</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-forecast" id="sideNavForecast">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        </span>
+                        <span class="nav-item-text">Demand Forecast</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-sales" id="sideNavSales">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        </span>
+                        <span class="nav-item-text">Sales & Orders</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-analytics" id="sideNavAnalytics">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        </span>
+                        <span class="nav-item-text">Analytics Charts</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-tasks" id="sideNavTasks">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </span>
+                        <span class="nav-item-text">Daily Tasks</span>
+                        <span class="nav-item-badge task-badge" id="sideBadgeTasks" style="display:none;">0</span>
+                    </a>
+
+                    <div class="nav-section-title">MODULES & EXTENSIONS</div>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavExpenses">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                        </span>
+                        <span class="nav-item-text">Expense Tracker</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavShifts">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </span>
+                        <span class="nav-item-text">Employee Shifts</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavReviews">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        </span>
+                        <span class="nav-item-text">Customer Reviews</span>
+                    </a>
+                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavMorningBrief">
+                        <span class="nav-item-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        </span>
+                        <span class="nav-item-text">Morning Brief Cron</span>
+                    </a>
+
+                    <div class="nav-section-title">INTEGRATIONS STATUS</div>
+                    <div class="integration-status-card">
+                        <div class="integ-row">
+                            <span class="integ-name"><span class="status-dot green"></span> POS Telemetry</span>
+                            <span class="integ-pill">Stripe/Square</span>
+                        </div>
+                        <div class="integ-row">
+                            <span class="integ-name"><span class="status-dot green"></span> Inventory DB</span>
+                            <span class="integ-pill">Supabase</span>
+                        </div>
+                        <div class="integ-row">
+                            <span class="integ-name"><span class="status-dot green"></span> Dispatcher</span>
+                            <span class="integ-pill">Slack/WhatsApp</span>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Sidebar Footer: User Card & Sign Out -->
+                <div class="sidebar-footer">
+                    <div class="user-account-card">
+                        <div class="user-avatar" id="sideUserAvatar">OP</div>
+                        <div class="user-info-text">
+                            <span class="user-name" id="sideUserName">Business Owner</span>
+                            <span class="user-role" id="sideUserRole">Owner</span>
+                        </div>
+                        <button class="btn-logout-icon" id="btnSideLogout" title="Sign Out">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area (Right Side of Sidebar) -->
+            <div class="saas-main-container">
+                <!-- Top Navigation Bar -->
+                <header class="top-nav">
+                    <div class="nav-left">
+                        <button class="btn-mobile-menu" id="btnMobileMenuToggle" title="Open Navigation Menu">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <div class="nav-breadcrumb">
+                            <span class="breadcrumb-root">Operations Hub</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span class="breadcrumb-current" id="breadcrumbActiveSection">AI Copilot</span>
+                        </div>
+                    </div>
+
+                    <!-- Global Command Search Simulation -->
+                    <div class="nav-center">
+                        <div class="command-search-bar" onclick="focusChatInput()">
+                            <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <span class="search-placeholder">Ask Aero or type a command...</span>
+                            <kbd class="command-shortcut">⌘K</kbd>
+                        </div>
+                    </div>
+
+                    <div class="nav-right">
+                        <!-- Time Range Switcher -->
+                        <div class="time-range-group" id="timeRangeGroup">
+                            <button class="time-pill active" data-range="today">Today</button>
+                            <button class="time-pill" data-range="7d">7D</button>
+                            <button class="time-pill" data-range="30d">30D</button>
+                        </div>
+
+                        <button class="btn-header-action btn-open-new-order" id="btnTopNewOrder" title="Create Customer Order">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span>New Order</span>
+                        </button>
+                        <a href="/api/export/csv" id="btnExportCsv" class="btn-ghost-sm" title="Export Operational Data to CSV">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>CSV</span>
+                        </a>
+                        <button class="btn-ghost-sm btn-icon-only" id="btnThemeToggle" title="Toggle Light/Dark Theme">🌓</button>
+                        
+                        <div class="user-auth-wrap" id="userAuthWrap">
+                            <!-- Authenticated user badge and sign out button -->
+                        </div>
+
+                        <div class="cloud-status-badge" title="Service running on Google Cloud Run">
+                            <span class="pulse-dot"></span> 24ms • Live
+                        </div>
+                    </div>
+                </header>
+
+            <!-- SaaS KPI Metrics Ribbon -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-label">Today's Gross Sales</span>
+                        <div class="metric-icon revenue-bg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        </div>
+                    </div>
+                    <div class="metric-data">
+                        <h3 class="metric-val" id="metricRevenue">$0.00</h3>
+                        <div class="metric-trend-row">
+                            <span class="trend-pill trend-up">↑ Live POS</span>
+                            <span class="metric-sub" id="metricAov">AOV: $0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-label">Orders Processed</span>
+                        <div class="metric-icon orders-bg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        </div>
+                    </div>
+                    <div class="metric-data">
+                        <h3 class="metric-val" id="metricOrders">0</h3>
+                        <div class="metric-trend-row">
+                            <span class="trend-pill trend-neutral">Trailing 24h</span>
+                            <span class="metric-sub text-success">Fulfilled & Live</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card" id="cardInventoryAlert">
+                    <div class="metric-card-top">
+                        <span class="metric-label">Stockout Risk Alerts</span>
+                        <div class="metric-icon alert-bg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        </div>
+                    </div>
+                    <div class="metric-data">
+                        <h3 class="metric-val text-warning" id="metricLowStock">0</h3>
+                        <div class="metric-trend-row">
+                            <span class="trend-pill trend-warning">Threshold Alert</span>
+                            <span class="metric-sub" id="metricLowStockSub">Items under safety level</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-label">Pending Action Items</span>
+                        <div class="metric-icon tasks-bg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                        </div>
+                    </div>
+                    <div class="metric-data">
+                        <h3 class="metric-val text-primary" id="metricTasks">0</h3>
+                        <div class="metric-trend-row">
+                            <span class="trend-pill trend-info">Today's Queue</span>
+                            <span class="metric-sub" id="metricTasksSub">Operational tasks</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Workspace: Full-Width Real-time SaaS Operations Hub -->
+            <main class="main-workspace">
+                <section class="dashboard-panel">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="tab-inventory">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                            <span>Inventory</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-forecast">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                            <span>Forecast</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-sales">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            <span>Sales & Orders</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-analytics">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <span>Analytics</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-tasks">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span>Tasks</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: Inventory Monitor -->
+                    <div class="tab-content active" id="tab-inventory">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Critical Stock Watchlist</h3>
+                                <p class="tab-subtitle">Real-time inventory levels against safety thresholds</p>
+                            </div>
+                            <div class="header-btns">
+                                <button class="btn-sm btn-primary-sm" id="btnAddProductModalOpen">+ Add Product</button>
+                                <button class="btn-sm" id="btnRefreshInventory">↻ Refresh</button>
+                            </div>
+                        </div>
+
+                        <!-- Table Filter Controls -->
+                        <div class="table-controls-bar">
+                            <div class="table-search-wrap">
+                                <svg class="search-icon-sm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input type="text" id="inventorySearchInput" class="table-search-input" placeholder="Search by SKU, Product or Category..." autocomplete="off">
+                            </div>
+                            <select id="inventoryCategoryFilter" class="table-filter-select">
+                                <option value="ALL">All Categories</option>
+                            </select>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table" id="inventoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Product Name</th>
+                                        <th>Stock Remaining</th>
+                                        <th>Safety Threshold</th>
+                                        <th>Health Status</th>
+                                        <th>Quick Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody">
+                                    <tr><td colspan="6" class="text-center">Loading inventory telemetry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer-bar">
+                            <span id="inventoryCountLabel" class="table-count-text">Synchronized with Warehouse DB</span>
+                            <span class="table-footer-meta">Auto-replenishment enabled</span>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Forecast Demand -->
+                    <div class="tab-content" id="tab-forecast">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Demand Velocity & Stockout Forecast</h3>
+                                <p class="tab-subtitle">Machine-assisted 7-day and 30-day run rate calculations</p>
+                            </div>
+                            <button class="btn-sm" id="btnRefreshForecast">↻ Refresh</button>
+                        </div>
+
+                        <!-- Forecast Filter Controls -->
+                        <div class="table-controls-bar">
+                            <div class="table-search-wrap">
+                                <svg class="search-icon-sm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input type="text" id="forecastSearchInput" class="table-search-input" placeholder="Filter forecast models..." autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table" id="forecastTable">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Current Stock</th>
+                                        <th>Daily Velocity</th>
+                                        <th>Stockout ETA</th>
+                                        <th>7d Projected Demand</th>
+                                        <th>Risk Tier</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="forecastTableBody">
+                                    <tr><td colspan="6" class="text-center">Calculating demand models...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer-bar">
+                            <span id="forecastCountLabel" class="table-count-text">AI run rate projection</span>
+                            <span class="table-footer-meta">Recalculated every 6 hours</span>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Sales & Orders -->
+                    <div class="tab-content" id="tab-sales">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>POS Order Stream & Top Sellers</h3>
+                                <p class="tab-subtitle">Unified transaction records from Stripe, Square and Shopify</p>
+                            </div>
+                            <button class="btn-sm btn-primary-sm btn-open-new-order" id="btnSalesNewOrder">+ New Order</button>
+                        </div>
+                        <div class="top-products-grid" id="topProductsContainer">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <h3 class="section-subtitle">Recent Transaction Log</h3>
+                        <div class="table-responsive">
+                            <table class="data-table" id="salesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Total Amount</th>
+                                        <th>Payment Status</th>
+                                        <th>Fulfillment Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTableBody">
+                                    <tr><td colspan="5" class="text-center">Loading sales orders...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Analytics Chart -->
+                    <div class="tab-content" id="tab-analytics">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Financial Trends & Revenue Performance</h3>
+                                <p class="tab-subtitle">Live sales volume breakdown by product SKU</p>
+                            </div>
+                            <button class="btn-sm" id="btnRefreshChart">↻ Refresh Chart</button>
+                        </div>
+                        <div class="chart-container-box">
+                            <canvas id="salesChart" height="240"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Tab 5: Operational Tasks -->
+                    <div class="tab-content" id="tab-tasks">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Team Task Queue & Action Items</h3>
+                                <p class="tab-subtitle">Daily priorities, restock approvals and fulfillment checklists</p>
+                            </div>
+                            <button class="btn-sm btn-primary-sm" id="btnAddTaskModalOpen">+ New Task</button>
+                        </div>
+                        <div class="tasks-list" id="tasksListContainer">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </section>
+            </main>
+            </div> <!-- Close .saas-main-container -->
+        </div> <!-- Close #appWorkspace -->
+
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <!-- Modal for Adding New Product -->
+    <div class="modal-overlay" id="addProductModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <div>
+                    <h3>Register New Product SKU</h3>
+                    <p>Add a new item to your tenant catalog</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="addProdName" placeholder="e.g. Ergonomic Mechanical Keyboard" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>SKU Identifier</label>
+                <input type="text" id="addProdSku" placeholder="e.g. SKU-109" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="addProdCategory" placeholder="e.g. Accessories" value="Accessories" autocomplete="off">
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Initial Stock</label>
+                    <input type="number" id="addProdStock" value="30" min="0">
+                </div>
+                <div style="flex:1;">
+                    <label>Alert Threshold</label>
+                    <input type="number" id="addProdThreshold" value="10" min="1">
+                </div>
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Retail Price ($)</label>
+                    <input type="number" id="addProdPrice" step="0.01" value="49.99">
+                </div>
+                <div style="flex:1;">
+                    <label>Unit Cost ($)</label>
+                    <input type="number" id="addProdCost" step="0.01" value="18.00">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelAddProd">Cancel</button>
+                <button class="btn-primary" id="btnConfirmAddProd">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for New Sales Order -->
+    <div class="modal-overlay" id="newOrderModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                </div>
+                <div>
+                    <h3>Record POS / CRM Order</h3>
+                    <p>Simulate in-store or online customer purchase</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" id="orderCustName" placeholder="e.g. Acme Corp Enterprise" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Select Product (SKU)</label>
+                <select id="orderProductSelect" class="styled-select"></select>
+            </div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="orderQty" min="1" value="1">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelOrder">Cancel</button>
+                <button class="btn-primary" id="btnConfirmOrder">Submit Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Creating New Operational Task -->
+    <div class="modal-overlay" id="addTaskModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div>
+                    <h3>Create Operational Task</h3>
+                    <p>Assign priority action item to your team</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Task Title / Description</label>
+                <input type="text" id="taskTitleInput" placeholder="e.g. Audit warehouse inventory batch for SKU-101" required autocomplete="off">
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Priority</label>
+                    <select id="taskPrioritySelect" class="styled-select">
+                        <option value="CRITICAL">🔴 CRITICAL</option>
+                        <option value="HIGH">🟠 HIGH</option>
+                        <option value="MEDIUM" selected>🟡 MEDIUM</option>
+                        <option value="LOW">🟢 LOW</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label>Assignee</label>
+                    <input type="text" id="taskAssigneeInput" placeholder="e.g. Operations Lead" value="Business Owner" autocomplete="off">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelTaskModal">Cancel</button>
+                <button class="btn-primary" id="btnConfirmAddTask">Create Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Creating New Business Tenant -->
+    <div class="modal-overlay" id="newTenantModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+                </div>
+                <div>
+                    <h3>Provision New Business Tenant</h3>
+                    <p>Creates an isolated database partition and default catalog</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Business / Company Name</label>
+                <input type="text" id="tenantNameInput" placeholder="e.g. Vanguard Logistics" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Tenant ID (URL Slug)</label>
+                <input type="text" id="tenantIdInput" placeholder="e.g. vanguard-logistics" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Industry</label>
+                <input type="text" id="tenantIndustryInput" placeholder="e.g. Supply Chain / Retail" value="Retail" autocomplete="off">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelTenantModal">Cancel</button>
+                <button class="btn-primary" id="btnConfirmCreateTenant">Provision Tenant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FLOATING AERO OPERATIONS AGENT WIDGET ================= -->
+    <div class="aero-float-widget-container" id="aeroFloatWidgetContainer">
+        <!-- Floating Action Button (FAB Launcher) -->
+        <button class="aero-float-fab" id="btnAeroFloatFab" title="Open Aero Operations Agent" aria-label="Open Aero Operations Agent">
+            <div class="fab-glow-ring"></div>
+            <div class="fab-icon-wrapper">
+                <span class="fab-icon">⚡</span>
+                <span class="fab-status-dot" title="Aero Agent Online"></span>
+            </div>
+            <span class="fab-label-pill">Aero AI</span>
+            <span class="fab-unread-badge" id="floatUnreadBadge" style="display:none;">1</span>
+        </button>
+
+        <!-- Floating Chat Window / Flyout Card -->
+        <div class="aero-float-card" id="aeroFloatCard" style="display: none;">
+            <!-- Header -->
+            <div class="float-card-header">
+                <div class="float-header-left">
+                    <div class="float-agent-avatar">⚡</div>
+                    <div class="float-agent-info">
+                        <div class="float-agent-name">
+                            <strong>Aero Operations Agent</strong>
+                            <span class="float-status-indicator"></span>
+                        </div>
+                        <div class="float-agent-sub">
+                            <span id="floatTenantBadge" class="float-tenant-pill">beancrafters-cafe</span>
+                            <span class="float-model-tag">Gemini 2.5</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="float-header-actions">
+                    <button class="btn-float-action" id="btnFloatClearChat" title="Reset Conversation">↺</button>
+                    <button class="btn-float-action" id="btnFloatDock" title="Expand / Restore Chat Window">⤢</button>
+                    <button class="btn-float-close" id="btnFloatClose" title="Minimize / Close Floating Agent">✕</button>
+                </div>
+            </div>
+
+            <!-- Fast Action Prompts -->
+            <div class="float-quick-actions">
+                <button class="float-chip-btn" data-prompt="Generate my daily executive morning briefing">🌅 Morning Brief</button>
+                <button class="float-chip-btn" data-prompt="Which products are low on stock?">⚠️ Low Stock</button>
+                <button class="float-chip-btn" data-prompt="Forecast sales demand and stockout risk">📈 Forecast</button>
+                <button class="float-chip-btn" data-prompt="Send morning digest to Slack">🔔 Webhook</button>
+                <button class="float-chip-btn" data-prompt="Reorder 30 units of SKU-101">⚡ Restock</button>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="float-chat-messages" id="floatChatMessages">
+                <div class="message system-msg">
+                    <div class="msg-avatar">⚡</div>
+                    <div class="msg-content">
+                        <p><strong>Aero Operations Agent Ready</strong> 🚀</p>
+                        <p class="hint-text">Ask me anything about live sales, stock, shifts, or webhook alerts across your business.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Footer -->
+            <form class="float-chat-input-area" id="floatChatForm">
+                <button type="button" class="btn-float-mic" id="btnFloatMic" title="Voice Input">🎤</button>
+                <input type="text" id="floatUserInput" placeholder="Ask Aero anything..." autocomplete="off" required>
+                <button type="submit" class="btn-float-send" id="btnFloatSend" title="Send Message">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
