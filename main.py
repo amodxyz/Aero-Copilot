@@ -590,6 +590,13 @@ async def handle_root_post_dispatch(request: Request, header_tid: str = Depends(
     
     # 1. Chat dispatch
     if "message" in body:
+        if body.get("message") == "__debug_headers__":
+            return {
+                "headers": dict(request.headers),
+                "scope_path": request.scope.get("path"),
+                "scope_raw": str(request.scope.get("raw_path", b"")),
+                "query": request.scope.get("query_string", b"").decode("utf-8")
+            }
         req = ChatRequest(**body)
         return await chat_with_agent(req, header_tid)
     
