@@ -476,6 +476,11 @@ async def get_feedback_report_endpoint(tid: str = Depends(resolve_tenant_id)):
     return analyzer.get_feedback_report()
 
 
+try:
+    from static_bundle import STATIC_ASSETS
+except ImportError:
+    STATIC_ASSETS = {}
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
@@ -485,6 +490,10 @@ if not os.path.exists(static_dir):
 @app.get("/api/index.py/static/{file_path:path}", include_in_schema=False)
 @app.get("/api/index/static/{file_path:path}", include_in_schema=False)
 async def serve_static_file(file_path: str):
+    fname = os.path.basename(file_path)
+    media_type = "text/css" if fname.endswith(".css") else ("application/javascript" if fname.endswith(".js") else None)
+    
+    # 1. Try resolving from disk
     possible_paths = [
         os.path.join(static_dir, file_path),
         os.path.join(os.getcwd(), "static", file_path),
@@ -492,9 +501,13 @@ async def serve_static_file(file_path: str):
     ]
     for target in possible_paths:
         if os.path.exists(target) and os.path.isfile(target):
-            media_type = "text/css" if file_path.endswith(".css") else ("application/javascript" if file_path.endswith(".js") else None)
             with open(target, "r", encoding="utf-8", errors="ignore") as f:
                 return Response(content=f.read(), media_type=media_type)
+    
+    # 2. Serverless fallback bundle
+    if fname in STATIC_ASSETS:
+        return Response(content=STATIC_ASSETS[fname], media_type=media_type)
+        
     raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
 
 
@@ -515,6 +528,10 @@ async def serve_index():
         if os.path.exists(index_file) and os.path.isfile(index_file):
             with open(index_file, "r", encoding="utf-8", errors="ignore") as f:
                 return HTMLResponse(content=f.read(), status_code=200)
+    
+    if "index.html" in STATIC_ASSETS:
+        return HTMLResponse(content=STATIC_ASSETS["index.html"], status_code=200)
+
     return HTMLResponse(content="<h1>Multi-Tenant Productivity Agent API is active.</h1>", status_code=200)
 
 
