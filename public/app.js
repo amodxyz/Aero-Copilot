@@ -245,6 +245,10 @@ window.logoutUser = logoutUser;
 
 function setupAuthListeners() {
     // 1. Gate Screen Tabs (Sign In vs Register)
+    const gateTabLogin = document.getElementById("gateTabLogin");
+    const gateTabReg = document.getElementById("gateTabRegister");
+    const gateFormLogin = document.getElementById("gateLoginForm");
+    const gateFormReg = document.getElementById("gateRegisterForm");
     const gateFormForgot = document.getElementById("gateForgotForm");
     const linkForgot = document.getElementById("linkForgotPassword");
     const linkBack = document.getElementById("linkBackToLogin");
