@@ -381,55 +381,8 @@
                 </div>
             </section>
 
-            <!-- Main Workspace: Split View (Chat Agent + Operations Dashboard) -->
+            <!-- Main Workspace: Full-Width Real-time SaaS Operations Hub -->
             <main class="main-workspace">
-                <!-- Left: AI Productivity Agent Panel -->
-                <section class="agent-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <span class="bot-status-dot"></span>
-                            <div class="agent-header-meta">
-                                <h2>Aero Operations Agent</h2>
-                                <span class="model-badge">Gemini 2.5 Flash + Cloud Run</span>
-                            </div>
-                        </div>
-                        <button class="btn-ghost-sm" id="btnClearChat" title="Clear Conversation">↺ Reset</button>
-                    </div>
-
-                    <div class="quick-prompts-container">
-                        <span class="quick-prompts-label">Fast Action Prompts:</span>
-                        <div class="quick-prompts">
-                            <button class="chip-btn" data-prompt="Generate my daily executive morning briefing">🌅 Morning Brief</button>
-                            <button class="chip-btn" data-prompt="Which products are low on stock?">⚠️ Low Stock</button>
-                            <button class="chip-btn" data-prompt="Forecast sales demand and stockout risk">📈 Forecast Demand</button>
-                            <button class="chip-btn" data-prompt="What are customers saying in recent feedback?">⭐ Customer Reviews</button>
-                            <button class="chip-btn" data-prompt="Reorder 30 units of SKU-101">⚡ Reorder Keyboards</button>
-                            <button class="chip-btn" data-prompt="Record a new order for Acme Corp buying 2 of SKU-101">🎉 New POS Order</button>
-                            <button class="chip-btn" data-prompt="Send morning digest to Slack">🔔 Slack Alert</button>
-                        </div>
-                    </div>
-
-                    <div class="chat-messages" id="chatMessages">
-                        <div class="message system-msg">
-                            <div class="msg-avatar">⚡</div>
-                            <div class="msg-content">
-                                <p><strong>Welcome back!</strong> I'm Aero, your daily operations copilot. I continuously monitor sales, audit stock thresholds, forecast 30-day inventory velocity, and dispatch daily reports.</p>
-                                <p class="hint-text">Type a command, ask a question, or click any quick prompt above.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <form class="chat-input-area" id="chatForm">
-                        <button type="button" class="btn-mic" id="btnMic" title="Voice Input">🎤</button>
-                        <input type="text" id="userInput" placeholder="Ask Aero: analyze sales, reorder stock, schedule shifts, create orders..." autocomplete="off" required>
-                        <button type="submit" class="btn-send" id="btnSend">
-                            <span>Send</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        </button>
-                    </form>
-                </section>
-
-                <!-- Right: Real-time SaaS Operations Hub -->
                 <section class="dashboard-panel">
                     <div class="tabs-nav">
                         <button class="tab-btn active" data-tab="tab-inventory">
@@ -792,7 +745,7 @@
                 </div>
                 <div class="float-header-actions">
                     <button class="btn-float-action" id="btnFloatClearChat" title="Reset Conversation">↺</button>
-                    <button class="btn-float-action" id="btnFloatDock" title="Focus In-Page Agent Panel">⤢</button>
+                    <button class="btn-float-action" id="btnFloatDock" title="Expand / Restore Chat Window">⤢</button>
                     <button class="btn-float-close" id="btnFloatClose" title="Minimize / Close Floating Agent">✕</button>
                 </div>
             </div>

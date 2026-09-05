@@ -27,20 +27,33 @@ function initTheme() {
     }
 }
 
-function focusChatInput() {
-    const input = document.getElementById("userInput");
-    if (input) {
-        input.focus();
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+function openFloatingAgent() {
+    const floatCard = document.getElementById("aeroFloatCard");
+    const unreadBadge = document.getElementById("floatUnreadBadge");
+    const floatInput = document.getElementById("floatUserInput");
+    if (floatCard) {
+        floatCard.style.display = "flex";
+        if (unreadBadge) unreadBadge.style.display = "none";
+        const floatBadge = document.getElementById("floatTenantBadge");
+        if (floatBadge) floatBadge.textContent = currentTenantId;
+        setTimeout(() => {
+            if (floatInput) floatInput.focus();
+            const fContainer = document.getElementById("floatChatMessages");
+            if (fContainer) fContainer.scrollTop = fContainer.scrollHeight;
+        }, 50);
     }
+}
+
+function focusChatInput() {
+    openFloatingAgent();
 }
 
 // Global Command Palette Shortcut (Ctrl+K or Cmd+K)
 document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        focusChatInput();
-        showToast("AI Copilot input focused", "⌨️");
+        openFloatingAgent();
+        showToast("Aero Operations Agent opened", "⚡");
     }
 });
 
@@ -1535,17 +1548,14 @@ function setupFloatingAgentWidget() {
         });
     }
 
-    // 3. Dock Button (Scroll to In-Page Main Agent Panel)
+    // 3. Expand / Restore Window Size Toggle Button
     if (btnDock && floatCard) {
         btnDock.addEventListener("click", () => {
-            floatCard.style.display = "none";
-            const agentPanel = document.querySelector(".agent-panel");
-            if (agentPanel) {
-                agentPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-            const mainInput = document.getElementById("userInput");
-            if (mainInput) mainInput.focus();
-            showToast("Focused Main In-Page Copilot Panel", "⚡");
+            floatCard.classList.toggle("expanded");
+            const isExp = floatCard.classList.contains("expanded");
+            btnDock.textContent = isExp ? "⤡" : "⤢";
+            btnDock.title = isExp ? "Restore compact size" : "Expand chat window";
+            showToast(isExp ? "Expanded Copilot window" : "Restored compact size", "📐");
         });
     }
 
