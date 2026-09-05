@@ -480,6 +480,24 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
 
+
+@app.get("/static/{file_path:path}", include_in_schema=False)
+@app.get("/api/index.py/static/{file_path:path}", include_in_schema=False)
+@app.get("/api/index/static/{file_path:path}", include_in_schema=False)
+async def serve_static_file(file_path: str):
+    possible_paths = [
+        os.path.join(static_dir, file_path),
+        os.path.join(os.getcwd(), "static", file_path),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", file_path)
+    ]
+    for target in possible_paths:
+        if os.path.exists(target) and os.path.isfile(target):
+            media_type = "text/css" if file_path.endswith(".css") else ("application/javascript" if file_path.endswith(".js") else None)
+            with open(target, "r", encoding="utf-8", errors="ignore") as f:
+                return Response(content=f.read(), media_type=media_type)
+    raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
+
+
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
@@ -488,10 +506,15 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 @app.get("/api/index", include_in_schema=False)
 @app.get("/api", include_in_schema=False)
 async def serve_index():
-    index_file = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_file):
-        with open(index_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
+    possible_paths = [
+        os.path.join(static_dir, "index.html"),
+        os.path.join(os.getcwd(), "static", "index.html"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html")
+    ]
+    for index_file in possible_paths:
+        if os.path.exists(index_file) and os.path.isfile(index_file):
+            with open(index_file, "r", encoding="utf-8", errors="ignore") as f:
+                return HTMLResponse(content=f.read(), status_code=200)
     return HTMLResponse(content="<h1>Multi-Tenant Productivity Agent API is active.</h1>", status_code=200)
 
 

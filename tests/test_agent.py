@@ -348,6 +348,21 @@ def test_vercel_routing_and_index_serving():
     assert r_api.status_code == 200
     assert len(r_api.json()) > 0
 
+    # Static CSS and JS assets
+    r_css = client.get("/static/style.css")
+    assert r_css.status_code == 200
+    assert "text/css" in r_css.headers.get("content-type", "")
+
+    r_js = client.get("/static/app.js")
+    assert r_js.status_code == 200
+    assert "javascript" in r_js.headers.get("content-type", "")
+
+    # Static CSS with serverless prefix
+    r_css_pref = client.get("/api/index.py/static/style.css")
+    assert r_css_pref.status_code == 200
+    assert "text/css" in r_css_pref.headers.get("content-type", "")
+
+
 
 
 
