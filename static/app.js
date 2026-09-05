@@ -1289,32 +1289,39 @@ function renderAnalyticsChart(topProducts) {
 }
 
 async function fetchTasks() {
-    const container = document.getElementById("tasksContainer");
+    const container = document.getElementById("tasksListContainer") || document.getElementById("tasksContainer");
+    if (!container) return;
     try {
         const res = await tenantFetch("/api/tasks");
         const data = await res.json();
 
         if (!data.tasks || data.tasks.length === 0) {
-            container.innerHTML = `<p style="font-size:0.8rem; color:var(--text-muted)">No active tasks scheduled for [${currentTenantId}].</p>`;
+            container.innerHTML = `<div style="padding:2.5rem; text-align:center; color:var(--text-dim);"><p>No active tasks scheduled for [${currentTenantId}].</p></div>`;
             return;
         }
 
         container.innerHTML = data.tasks.map(t => {
             const isDone = t.status === "COMPLETED";
-            let badgeClass = t.priority === "CRITICAL" ? "badge-critical" : (t.priority === "HIGH" ? "badge-warning" : "badge-success");
+            let statusClass = t.priority === "CRITICAL" ? "status-critical" : (t.priority === "HIGH" ? "status-warning" : "status-healthy");
             return `
                 <div class="task-item ${isDone ? 'completed' : ''}" id="task-${t.task_id}">
-                    <input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${t.task_id}, this.checked)">
-                    <div class="task-info">
-                        <div class="task-title">${t.title}</div>
-                        <div class="task-meta">Due: ${t.due_date} • Assigned: ${t.assigned_to} • Status: <strong>${t.status}</strong></div>
+                    <div class="task-left">
+                        <input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${t.task_id}, this.checked)">
+                        <div class="task-info">
+                            <div class="task-title ${isDone ? 'completed' : ''}">${t.title}</div>
+                            <div class="task-meta">Due: <strong>${t.due_date}</strong> • Assigned: <span>${t.assigned_to}</span> • Status: <strong style="color:var(--text-main)">${t.status}</strong></div>
+                        </div>
                     </div>
-                    <span class="badge-tag ${badgeClass}">${t.priority}</span>
+                    <span class="status-badge ${statusClass}">
+                        <span class="status-indicator-dot"></span>
+                        ${t.priority}
+                    </span>
                 </div>
             `;
         }).join("");
     } catch (err) {
         console.error("Error fetching tasks:", err);
+        container.innerHTML = `<div style="padding:1.5rem; text-align:center; color:var(--danger);"><p>Error loading tasks.</p></div>`;
     }
 }
 
