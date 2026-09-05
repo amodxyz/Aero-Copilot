@@ -245,27 +245,59 @@ window.logoutUser = logoutUser;
 
 function setupAuthListeners() {
     // 1. Gate Screen Tabs (Sign In vs Register)
-    const gateTabLogin = document.getElementById("gateTabLogin");
-    const gateTabReg = document.getElementById("gateTabRegister");
-    const gateFormLogin = document.getElementById("gateLoginForm");
-    const gateFormReg = document.getElementById("gateRegisterForm");
+    const gateFormForgot = document.getElementById("gateForgotForm");
+    const linkForgot = document.getElementById("linkForgotPassword");
+    const linkBack = document.getElementById("linkBackToLogin");
 
     if (gateTabLogin && gateTabReg) {
         gateTabLogin.addEventListener("click", (e) => {
             e.preventDefault();
             gateTabLogin.classList.add("active");
             gateTabReg.classList.remove("active");
-            gateFormLogin.style.display = "flex";
-            gateFormReg.style.display = "none";
+            if (gateFormLogin) gateFormLogin.style.display = "flex";
+            if (gateFormReg) gateFormReg.style.display = "none";
+            if (gateFormForgot) gateFormForgot.style.display = "none";
         });
 
         gateTabReg.addEventListener("click", (e) => {
             e.preventDefault();
             gateTabReg.classList.add("active");
             gateTabLogin.classList.remove("active");
-            gateFormReg.style.display = "flex";
-            gateFormLogin.style.display = "none";
+            if (gateFormReg) gateFormReg.style.display = "flex";
+            if (gateFormLogin) gateFormLogin.style.display = "none";
+            if (gateFormForgot) gateFormForgot.style.display = "none";
             populateGateTenantSelect();
+        });
+    }
+
+    // Forgot Password Link in Login Form
+    if (linkForgot && gateFormForgot) {
+        linkForgot.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (gateTabLogin) gateTabLogin.classList.remove("active");
+            if (gateTabReg) gateTabReg.classList.remove("active");
+            if (gateFormLogin) gateFormLogin.style.display = "none";
+            if (gateFormReg) gateFormReg.style.display = "none";
+            gateFormForgot.style.display = "flex";
+
+            // Autofill email if user had typed it in login form
+            const loginEmail = document.getElementById("gateLoginEmail");
+            const forgotEmail = document.getElementById("gateForgotEmail");
+            if (loginEmail && forgotEmail && loginEmail.value) {
+                forgotEmail.value = loginEmail.value;
+            }
+        });
+    }
+
+    // Back to Login Link in Forgot Password Form
+    if (linkBack && gateFormForgot) {
+        linkBack.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (gateTabLogin) gateTabLogin.classList.add("active");
+            if (gateTabReg) gateTabReg.classList.remove("active");
+            if (gateFormLogin) gateFormLogin.style.display = "flex";
+            if (gateFormReg) gateFormReg.style.display = "none";
+            gateFormForgot.style.display = "none";
         });
     }
 
@@ -300,12 +332,48 @@ function setupAuthListeners() {
                 alert("Server connection failed. Ensure server is running.");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<span>Unlock Operations Dashboard</span> →`;
+                btn.innerHTML = `<span>Sign In to Dashboard</span> →`;
             }
         });
     }
 
-    // 3. Gate Screen Register Submit
+    // 3. Gate Screen Forgot Password Submit
+    if (gateFormForgot) {
+        gateFormForgot.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("gateForgotEmail").value.trim();
+            const newPassword = document.getElementById("gateForgotNewPassword").value;
+            const btn = document.getElementById("btnGateForgotSubmit");
+
+            btn.disabled = true;
+            btn.innerHTML = `<span>Updating Password...</span> ⏳`;
+
+            try {
+                const res = await fetch("/api/auth/reset-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, new_password: newPassword })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem("aero_auth_token", authToken);
+                    showToast(`Password updated! Welcome back, ${currentUser.full_name}!`, "🔑");
+                    showDashboard(currentUser);
+                } else {
+                    alert(data.detail || "Password reset failed.");
+                }
+            } catch (err) {
+                alert("Server connection failed. Ensure server is running.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Reset Password & Enter Dashboard</span> →`;
+            }
+        });
+    }
+
+    // 4. Gate Screen Register Submit
     if (gateFormReg) {
         gateFormReg.addEventListener("submit", async (e) => {
             e.preventDefault();

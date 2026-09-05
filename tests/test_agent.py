@@ -186,6 +186,30 @@ def test_user_authentication_flow():
     revoked_me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert revoked_me.status_code == 401
 
+    # 7. Reset password flow
+    reset_resp = client.post("/api/auth/reset-password", json={
+        "email": "owner@acme.com",
+        "new_password": "NewSecretPass456!"
+    })
+    assert reset_resp.status_code == 200
+    assert "token" in reset_resp.json()
+    new_token = reset_resp.json()["token"]
+
+    # 8. Login with newly updated password
+    new_login = client.post("/api/auth/login", json={
+        "email": "owner@acme.com",
+        "password": "NewSecretPass456!"
+    })
+    assert new_login.status_code == 200
+    assert new_login.json()["user"]["email"] == "owner@acme.com"
+
+    # 9. Verify old password is now rejected
+    old_login = client.post("/api/auth/login", json={
+        "email": "owner@acme.com",
+        "password": "acme123"
+    })
+    assert old_login.status_code == 401
+
 
 def test_cloud_scheduler_cron_daily_report():
     """Test Cloud Scheduler cron automated execution and multi-channel report dispatch."""

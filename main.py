@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
-from database import init_db, list_all_tenants, create_tenant, register_user, authenticate_user, verify_token, revoke_token
+from database import init_db, list_all_tenants, create_tenant, register_user, authenticate_user, verify_token, revoke_token, reset_user_password
 from agent import agent_instance
 from integrations.notification_connectors import MultiChannelDispatcher
 from modules.expense_tracker import ExpenseTracker
@@ -134,6 +134,11 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
+class UserResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+
 class TenantCreateRequest(BaseModel):
     tenant_id: str
     name: str
@@ -246,6 +251,14 @@ async def auth_login(req: UserLoginRequest):
     res = authenticate_user(req.email, req.password)
     if not res.get("success"):
         raise HTTPException(status_code=401, detail=res.get("error"))
+    return res
+
+
+@app.post("/api/auth/reset-password", tags=["Auth"])
+async def auth_reset_password(req: UserResetPasswordRequest):
+    res = reset_user_password(req.email, req.new_password)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error"))
     return res
 
 
@@ -607,8 +620,13 @@ async def handle_root_post_dispatch(request: Request, header_tid: str = Depends(
     if "email" in body and "password" in body and "full_name" not in body:
         req = UserLoginRequest(**body)
         return await auth_login(req)
+
+    # 3. Password Reset dispatch
+    if "email" in body and "new_password" in body:
+        req = UserResetPasswordRequest(**body)
+        return await auth_reset_password(req)
         
-    # 3. Register dispatch
+    # 4. Register dispatch
     if "email" in body and "password" in body and "full_name" in body:
         req = UserRegisterRequest(**body)
         return await auth_register(req)

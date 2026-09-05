@@ -477,6 +477,53 @@ def revoke_token(token: str) -> bool:
     return True
 
 
+def reset_user_password(email: str, new_password: str) -> Dict[str, Any]:
+    """Resets the password for a registered user and issues a fresh auth session token."""
+    import secrets
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    email_clean = email.strip().lower()
+    pwd_hash = hash_password(new_password)
+
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email_clean,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return {"success": False, "error": f"No account found with email '{email_clean}'."}
+
+    user_dict = dict(user)
+    user_id = user_dict["user_id"]
+    tenant_id = user_dict["tenant_id"]
+
+    # Update password hash in users table
+    cursor.execute("UPDATE users SET password_hash = ? WHERE email = ?", (pwd_hash, email_clean))
+
+    # Invalidate prior auth tokens
+    cursor.execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
+
+    # Create fresh session token
+    token = secrets.token_urlsafe(32)
+    now_iso = datetime.datetime.now().isoformat()
+    expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+    cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "token": token,
+        "message": "Password reset successfully. Signed in.",
+        "user": {
+            "user_id": user_id,
+            "tenant_id": tenant_id,
+            "email": user_dict["email"],
+            "full_name": user_dict["full_name"],
+            "role": user_dict["role"]
+        }
+    }
+
+
 # ---------------- Multi-Tenant Helpers ---------------- #
 
 def create_tenant(tenant_id: str, name: str, industry: str = "General Retail", currency: str = "USD") -> Dict[str, Any]:
