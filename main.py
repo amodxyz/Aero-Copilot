@@ -513,11 +513,11 @@ async def serve_static_file(file_path: str):
     for target in possible_paths:
         if os.path.exists(target) and os.path.isfile(target):
             with open(target, "r", encoding="utf-8", errors="ignore") as f:
-                return Response(content=f.read(), media_type=media_type)
+                return Response(content=f.read(), media_type=media_type, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
     
     # 2. Serverless fallback bundle
     if fname in STATIC_ASSETS:
-        return Response(content=STATIC_ASSETS[fname], media_type=media_type)
+        return Response(content=STATIC_ASSETS[fname], media_type=media_type, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
         
     raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
 
