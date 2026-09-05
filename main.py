@@ -271,6 +271,7 @@ async def register_tenant(req: TenantCreateRequest):
 
 # Conversational Agent
 @app.post("/api/chat", tags=["Agent"])
+@app.post("/api/agent/chat", tags=["Agent"])
 async def chat_with_agent(req: ChatRequest, header_tid: str = Depends(resolve_tenant_id)):
     if not req.message or not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")

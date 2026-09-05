@@ -10,14 +10,16 @@ let conversationHistory = [];
 let salesChartInstance = null;
 let allTenantsCache = [];
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     initTheme();
-    await fetchTenants();
-    await checkAuthStatus();
     setupEventListeners();
     setupAuthListeners();
     setupSpeechRecognition();
     setupFloatingAgentWidget();
+
+    // Async data loading in background
+    fetchTenants();
+    checkAuthStatus();
 });
 
 function initTheme() {
