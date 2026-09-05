@@ -64,6 +64,10 @@ class ProductivityAgent:
 
     def process_message(self, user_message: str, chat_history: Optional[List[Dict[str, str]]] = None, tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
         """Processes a user request scoped to a specific business tenant."""
+        clean_input = user_message.strip().lower()
+        if clean_input in ("1", "2", "3", "4", "5", "6", "7") or clean_input.startswith(("option 1", "option 2", "option 3", "option 4", "option 5", "option 6", "option 7")):
+            return self._process_with_rule_engine(user_message, tenant_id)
+
         if self.client:
             try:
                 return self._process_with_gemini(user_message, chat_history, tenant_id)
@@ -92,7 +96,7 @@ class ProductivityAgent:
             add_new_product,
         ]
 
-        system_with_tenant = f"{SYSTEM_INSTRUCTION}\nActive Tenant ID: '{tenant_id}'."
+        system_with_tenant = f"{SYSTEM_INSTRUCTION}\nActive Business Tenant: [{tenant_id}]. Always include the tenant tag [{tenant_id}] in the report header."
         config = self.types.GenerateContentConfig(
             system_instruction=system_with_tenant,
             temperature=0.2,
@@ -101,7 +105,7 @@ class ProductivityAgent:
 
         response = self.client.models.generate_content(
             model=model_name,
-            contents=user_message,
+            contents=f"[{tenant_id}] {user_message}",
             config=config,
         )
 
@@ -122,7 +126,7 @@ class ProductivityAgent:
                     })
 
             tool_outputs_text = json.dumps([tc["result"] for tc in tool_calls_executed])
-            summary_prompt = f"User asked: {user_message}\n\nTool execution results for tenant {tenant_id}:\n{tool_outputs_text}\n\nProvide an executive summary."
+            summary_prompt = f"User asked: {user_message}\n\nTool execution results for tenant [{tenant_id}]:\n{tool_outputs_text}\n\nProvide an executive summary and include the header [{tenant_id}]."
             
             summary_response = self.client.models.generate_content(
                 model=model_name,
@@ -133,17 +137,25 @@ class ProductivityAgent:
                 )
             )
 
+            reply_text = summary_response.text or ""
+            if f"[{tenant_id}]" not in reply_text and tenant_id not in reply_text:
+                reply_text = f"📊 **Operations Report [{tenant_id}]**\n\n" + reply_text
+
             return {
                 "tenant_id": tenant_id,
-                "reply": summary_response.text,
+                "reply": reply_text,
                 "tool_calls": tool_calls_executed,
                 "engine": "gemini-cloud",
                 "timestamp": datetime.datetime.now().isoformat()
             }
 
+        final_text = response.text or "Request processed."
+        if f"[{tenant_id}]" not in final_text and tenant_id not in final_text:
+            final_text = f"⚡ **Aero Copilot [{tenant_id}]**\n\n" + final_text
+
         return {
             "tenant_id": tenant_id,
-            "reply": response.text or "Request processed.",
+            "reply": final_text,
             "tool_calls": [],
             "engine": "gemini-cloud",
             "timestamp": datetime.datetime.now().isoformat()
