@@ -1,0 +1,24 @@
+# Google Cloud Scheduler Job Specification
+# Triggers the Productivity Agent Daily Operational Briefing & Dispatch at 08:00 AM every morning.
+# Target: POST https://<CLOUD_RUN_SERVICE_URL>/api/cron/daily-report
+
+name: projects/PROJECT_ID/locations/REGION/jobs/daily-productivity-briefing
+description: "Triggers daily sales summary, low-stock alerts, and multi-channel dispatch via Slack/WhatsApp/Email."
+schedule: "0 8 * * *"
+timeZone: "America/New_York"
+httpTarget:
+  uri: "https://SERVICE_URL/api/cron/daily-report"
+  httpMethod: POST
+  headers:
+    Content-Type: "application/json"
+    User-Agent: "Google-Cloud-Scheduler"
+  body: '{"channel": "all", "notify": true}'
+  oidcToken:
+    serviceAccountEmail: "cloud-scheduler-sa@PROJECT_ID.iam.gserviceaccount.com"
+    audience: "https://SERVICE_URL"
+retryConfig:
+  retryCount: 3
+  maxRetryDuration: "600s"
+  minBackoffDuration: "5s"
+  maxBackoffDuration: "60s"
+  maxDoublings: 3
