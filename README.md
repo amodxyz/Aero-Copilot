@@ -152,3 +152,9 @@ chmod +x cloud_scheduler/setup_scheduler.sh
 | **Employees** | `/api/employees/productivity` | `GET` | Staff task completion & productivity |
 | **Feedback** | `/api/feedback/review` | `POST` | Ingest customer feedback review |
 | **Feedback** | `/api/feedback/report` | `GET` | Net Promoter Score (NPS) & sentiment |
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) &copy; 2026 amodxyz. All rights reserved.
