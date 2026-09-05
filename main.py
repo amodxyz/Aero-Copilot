@@ -133,7 +133,7 @@ class TenantCreateRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     tenant_id: Optional[str] = None
-    history: Optional[List[Dict[str, str]]] = None
+    history: Optional[List[Dict[str, Any]]] = None
 
 
 class ReorderRequest(BaseModel):
@@ -273,12 +273,26 @@ async def register_tenant(req: TenantCreateRequest):
 @app.post("/api/chat", tags=["Agent"])
 @app.post("/api/agent/chat", tags=["Agent"])
 async def chat_with_agent(req: ChatRequest, header_tid: str = Depends(resolve_tenant_id)):
-    if not req.message or not req.message.strip():
-        raise HTTPException(status_code=400, detail="Message cannot be empty.")
-    
-    tid = req.tenant_id or header_tid
-    result = agent_instance.process_message(req.message, req.history, tenant_id=tid)
-    return result
+    try:
+        msg = req.message if req and req.message else ""
+        if not msg.strip():
+            raise HTTPException(status_code=400, detail="Message cannot be empty.")
+        
+        tid = (req.tenant_id if req and req.tenant_id else None) or header_tid or DEFAULT_TENANT
+        history = req.history if req else None
+        result = agent_instance.process_message(msg, history, tenant_id=tid)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[API] Chat processing error: {e}")
+        return {
+            "tenant_id": header_tid or DEFAULT_TENANT,
+            "reply": f"⚡ **Aero Copilot [{header_tid or DEFAULT_TENANT}]**\n\nI processed your request using local operational rules.",
+            "tool_calls": [],
+            "engine": "fallback-safe",
+            "timestamp": datetime.datetime.now().isoformat()
+        }
 
 
 # Operational Analytics Endpoints

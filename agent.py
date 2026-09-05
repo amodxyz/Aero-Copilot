@@ -62,19 +62,23 @@ class ProductivityAgent:
                 print(f"[Agent] Failed to initialize Google GenAI SDK: {e}. Falling back to rule-based engine.")
                 self.client = None
 
-    def process_message(self, user_message: str, chat_history: Optional[List[Dict[str, str]]] = None, tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
+    def process_message(self, user_message: str, chat_history: Optional[List[Dict[str, Any]]] = None, tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
         """Processes a user request scoped to a specific business tenant."""
-        clean_input = user_message.strip().lower()
-        if clean_input in ("1", "2", "3", "4", "5", "6", "7") or clean_input.startswith(("option 1", "option 2", "option 3", "option 4", "option 5", "option 6", "option 7")):
+        try:
+            clean_input = user_message.strip().lower()
+            if clean_input in ("1", "2", "3", "4", "5", "6", "7") or clean_input.startswith(("option 1", "option 2", "option 3", "option 4", "option 5", "option 6", "option 7")):
+                return self._process_with_rule_engine(user_message, tenant_id)
+
+            if self.client:
+                try:
+                    return self._process_with_gemini(user_message, chat_history, tenant_id)
+                except Exception as e:
+                    print(f"[Agent] Gemini error: {e}. Falling back to rule engine.")
+
             return self._process_with_rule_engine(user_message, tenant_id)
-
-        if self.client:
-            try:
-                return self._process_with_gemini(user_message, chat_history, tenant_id)
-            except Exception as e:
-                print(f"[Agent] Gemini error: {e}. Falling back to rule engine.")
-
-        return self._process_with_rule_engine(user_message, tenant_id)
+        except Exception as err:
+            print(f"[Agent] Fatal process error: {err}")
+            return self._process_with_rule_engine(user_message, tenant_id)
 
     def _process_with_gemini(self, user_message: str, chat_history: Optional[List[Dict[str, str]]], tenant_id: str) -> Dict[str, Any]:
         model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")

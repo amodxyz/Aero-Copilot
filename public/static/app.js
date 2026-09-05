@@ -1441,7 +1441,13 @@ async function sendChatMessage(userMsg) {
         removeTypingIndicator(typingId);
 
         if (!res.ok) {
-            appendMessage("⚠️ Error processing request with the agent.", "bot");
+            let errorMsg = "Error processing request with the agent.";
+            try {
+                const errData = await res.json();
+                if (errData.detail) errorMsg = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
+                else if (errData.reply) errorMsg = errData.reply;
+            } catch (e) {}
+            appendMessage(`⚠️ ${errorMsg}`, "bot");
             return;
         }
 
