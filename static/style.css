@@ -3155,32 +3155,38 @@ body.light-theme .float-card-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.65rem;
+    gap: 0.75rem;
     background: #ffffff;
-    color: #1f2937;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.35);
     font-family: var(--font-sans);
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     font-weight: 600;
-    padding: 0.7rem 1rem;
-    border-radius: var(--radius-md);
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.1);
     width: 100%;
+    box-sizing: border-box;
+    letter-spacing: -0.01em;
 }
 
 .btn-google:hover {
     background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 .btn-google:active {
     transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .btn-google svg {
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 
@@ -3188,23 +3194,25 @@ body.light-theme .float-card-header {
     display: flex;
     align-items: center;
     text-align: center;
-    margin: 0.25rem 0;
-    color: var(--text-dim);
+    margin: 0.85rem 0 0.5rem 0;
+    width: 100%;
 }
 
 .auth-divider::before,
 .auth-divider::after {
     content: '';
     flex: 1;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .auth-divider span {
-    padding: 0 0.75rem;
-    font-size: 0.72rem;
+    padding: 0 0.85rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--text-dim);
 }
+
 
 
