@@ -125,6 +125,12 @@ function showDashboard(user) {
         workspace.style.flexDirection = "";
     }
 
+    // Show floating AI bot inside dashboard
+    const floatWidget = document.getElementById("aeroFloatWidgetContainer");
+    if (floatWidget) {
+        floatWidget.style.display = "flex";
+    }
+
     // Restore sidebar collapsed preference
     const isSidebarCollapsed = localStorage.getItem("aero_sidebar_collapsed") === "true";
     const sidebar = document.getElementById("saasSidebar");
@@ -155,6 +161,16 @@ function showAuthGate() {
         gate.classList.remove("hidden");
         gate.style.display = "flex";
         gate.style.flexDirection = "column";
+    }
+
+    // Hide floating AI bot on landing / sign-in screen
+    const floatWidget = document.getElementById("aeroFloatWidgetContainer");
+    const floatCard = document.getElementById("aeroFloatCard");
+    if (floatWidget) {
+        floatWidget.style.display = "none";
+    }
+    if (floatCard) {
+        floatCard.style.display = "none";
     }
 
     // Reset password field
