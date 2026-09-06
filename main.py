@@ -129,7 +129,8 @@ class UserRegisterRequest(BaseModel):
     email: str
     password: str
     full_name: str
-    tenant_id: str
+    tenant_id: Optional[str] = None
+    company_name: Optional[str] = None
     role: str = "OWNER"
 
 
@@ -284,7 +285,17 @@ async def health_check():
 # Authentication Endpoints
 @app.post("/api/auth/register", tags=["Auth"])
 async def auth_register(req: UserRegisterRequest):
-    res = register_user(req.tenant_id, req.email, req.password, req.full_name, req.role)
+    import re
+    company = (req.company_name or req.tenant_id or "My Business").strip()
+    slug = re.sub(r'[^a-zA-Z0-9]+', '-', company.lower()).strip('-')
+    tid = req.tenant_id if req.tenant_id and req.tenant_id.strip() else (slug or "my-business")
+
+    from database import query_one
+    existing_tenant = query_one("SELECT * FROM tenants WHERE tenant_id = ?", (tid,))
+    if not existing_tenant:
+        create_tenant(tid, company, industry="General Business")
+
+    res = register_user(tid, req.email, req.password, req.full_name, req.role)
     if not res.get("success"):
         raise HTTPException(status_code=400, detail=res.get("error"))
     return res

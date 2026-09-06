@@ -391,12 +391,13 @@ function setupAuthListeners() {
             e.preventDefault();
             const fullName = document.getElementById("gateRegFullName").value.trim();
             const email = document.getElementById("gateRegEmail").value.trim();
-            const password = document.getElementById("gateRegPassword").value;
-            const tenantId = document.getElementById("gateRegTenantSelect").value;
+            const companyInput = document.getElementById("gateRegCompanyName");
+            const companyName = companyInput ? companyInput.value.trim() : "My Business";
+            const tenantId = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || "my-business";
             const btn = document.getElementById("btnGateRegisterSubmit");
 
             btn.disabled = true;
-            btn.innerHTML = `<span>Creating account...</span> ⏳`;
+            btn.innerHTML = `<span>Creating workspace & account...</span> ⏳`;
 
             try {
                 const res = await fetch("/api/auth/register", {
@@ -406,6 +407,7 @@ function setupAuthListeners() {
                         full_name: fullName,
                         email,
                         password,
+                        company_name: companyName,
                         tenant_id: tenantId,
                         role: "OWNER"
                     })
