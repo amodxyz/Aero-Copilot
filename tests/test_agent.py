@@ -458,6 +458,46 @@ def test_product_add_and_retrieval_flow():
     assert any(tc["tool"] == "add_new_product" for tc in agent_res["tool_calls"])
 
 
+def test_google_authentication_flow():
+    """Test Google OAuth Signup/Login endpoint and user provisioning."""
+    import secrets
+    client = TestClient(app)
+    test_google_email = f"googleuser_{secrets.token_hex(4)}@gmail.com"
+
+    # 1. Signup/Login new user with Google Auth
+    res = client.post("/api/auth/google", json={
+        "email": test_google_email,
+        "full_name": "Google Test User",
+        "tenant_id": "beancrafters-cafe"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert "token" in data
+    assert data["user"]["email"] == test_google_email
+    assert data["user"]["tenant_id"] == "beancrafters-cafe"
+    assert data["user"]["role"] == "OWNER"
+
+    token = data["token"]
+
+    # 2. Verify /api/auth/me works with returned token
+    me_res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_res.status_code == 200
+    me_data = me_res.json()
+    assert me_data["email"] == test_google_email
+    assert me_data["tenant_id"] == "beancrafters-cafe"
+
+    # 3. Existing Google user login
+    res_login = client.post("/api/auth/google", json={
+        "email": test_google_email,
+        "full_name": "Google Test User"
+    })
+    assert res_login.status_code == 200
+    login_data = res_login.json()
+    assert login_data["success"] is True
+    assert login_data["user"]["user_id"] == data["user"]["user_id"]
+
+
 
 
 

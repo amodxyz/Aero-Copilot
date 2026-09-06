@@ -3150,3 +3150,61 @@ body.light-theme .float-card-header {
     font-style: italic;
 }
 
+/* ================= GOOGLE OAUTH BUTTON & DIVIDER ================= */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-family: var(--font-sans);
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    width: 100%;
+}
+
+.btn-google:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.btn-google:active {
+    transform: translateY(0);
+}
+
+.btn-google svg {
+    flex-shrink: 0;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 0.25rem 0;
+    color: var(--text-dim);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.auth-divider span {
+    padding: 0 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+}
+
+

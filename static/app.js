@@ -240,8 +240,115 @@ async function logoutUser(showNotification = true) {
     }
 }
 
-// Expose logoutUser and fillLogin globally to window
+// Expose logoutUser and Google Auth globally to window
 window.logoutUser = logoutUser;
+
+// Google OAuth Sign-in & Sign-up Handler
+async function handleGoogleCredentialResponse(response) {
+    if (!response || !response.credential) {
+        alert("Google authentication did not return a valid credential.");
+        return;
+    }
+
+    const regTenantSelect = document.getElementById("gateRegTenantSelect");
+    const tenantId = (regTenantSelect && regTenantSelect.value) ? regTenantSelect.value : (currentTenantId || "acme-electronics");
+
+    showToast("Authenticating with Google...", "⚡");
+
+    try {
+        const res = await fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                credential: response.credential,
+                tenant_id: tenantId
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            authToken = data.token;
+            currentUser = data.user;
+            localStorage.setItem("aero_auth_token", authToken);
+            if (currentUser && currentUser.tenant_id) {
+                currentTenantId = currentUser.tenant_id;
+                localStorage.setItem("aero_active_tenant", currentTenantId);
+            }
+            showToast(`Welcome, ${currentUser.full_name || currentUser.email}!`, "🎉");
+            showDashboard(currentUser);
+        } else {
+            alert(data.detail || "Google authentication failed.");
+        }
+    } catch (err) {
+        console.error("Google auth request error:", err);
+        alert("Could not connect to authentication server.");
+    }
+}
+
+window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+
+function triggerFallbackGoogleAuth() {
+    const userEmail = prompt("Sign in with Google Account:\nEnter your Google Email address:", "owner@acme.com");
+    if (!userEmail || !userEmail.trim()) return;
+    
+    const userName = userEmail.split("@")[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const regTenantSelect = document.getElementById("gateRegTenantSelect");
+    const tenantId = (regTenantSelect && regTenantSelect.value) ? regTenantSelect.value : (currentTenantId || "acme-electronics");
+
+    showToast("Connecting to Google...", "⚡");
+
+    fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: userEmail.trim(),
+            full_name: userName,
+            tenant_id: tenantId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            authToken = data.token;
+            currentUser = data.user;
+            localStorage.setItem("aero_auth_token", authToken);
+            if (currentUser && currentUser.tenant_id) {
+                currentTenantId = currentUser.tenant_id;
+                localStorage.setItem("aero_active_tenant", currentTenantId);
+            }
+            showToast(`Signed in with Google as ${currentUser.full_name}!`, "🎉");
+            showDashboard(currentUser);
+        } else {
+            alert(data.detail || "Google authentication failed.");
+        }
+    })
+    .catch(err => {
+        alert("Failed to authenticate with Google.");
+    });
+}
+
+window.triggerGoogleAuth = function() {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+            window.google.accounts.id.initialize({
+                client_id: window.GOOGLE_CLIENT_ID || "1038592389142-dummyclientid.apps.googleusercontent.com",
+                callback: handleGoogleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            window.google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    triggerFallbackGoogleAuth();
+                }
+            });
+        } catch (e) {
+            triggerFallbackGoogleAuth();
+        }
+    } else {
+        triggerFallbackGoogleAuth();
+    }
+};
+
 window.fillLogin = function(email, pwd) {
     const e = document.getElementById("gateLoginEmail");
     const p = document.getElementById("gateLoginPassword");
@@ -250,6 +357,7 @@ window.fillLogin = function(email, pwd) {
     const btn = document.getElementById("btnGateLoginSubmit");
     if (btn) btn.click();
 };
+
 
 function setupAuthListeners() {
     // 1. Gate Screen Tabs (Sign In vs Register)

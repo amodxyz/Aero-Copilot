@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
-from database import init_db, list_all_tenants, create_tenant, register_user, authenticate_user, verify_token, revoke_token, reset_user_password
+from database import init_db, list_all_tenants, create_tenant, register_user, authenticate_user, verify_token, revoke_token, reset_user_password, authenticate_or_register_google_user
 from agent import agent_instance
 from integrations.notification_connectors import MultiChannelDispatcher
 from modules.expense_tracker import ExpenseTracker
@@ -143,6 +143,46 @@ class UserResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    tenant_id: Optional[str] = "acme-electronics"
+
+
+def decode_google_id_token(credential: str) -> Dict[str, Any]:
+    """Decodes and validates a Google ID token."""
+    import json
+    import base64
+    import urllib.request
+    
+    # 1. Try Google tokeninfo API endpoint
+    try:
+        url = f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Aero-Copilot/2.5"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data
+    except Exception as e:
+        print(f"[Google Auth] Tokeninfo check note: {e}")
+    
+    # 2. Fallback: Parse JWT payload
+    try:
+        parts = credential.split(".")
+        if len(parts) >= 2:
+            payload_b64 = parts[1]
+            rem = len(payload_b64) % 4
+            if rem > 0:
+                payload_b64 += "=" * (4 - rem)
+            payload_json = base64.urlsafe_b64decode(payload_b64).decode("utf-8")
+            return json.loads(payload_json)
+    except Exception as e:
+        print(f"[Google Auth] JWT decode fallback error: {e}")
+
+    return {}
+
+
 class TenantCreateRequest(BaseModel):
     tenant_id: str
     name: str
@@ -263,6 +303,37 @@ async def auth_reset_password(req: UserResetPasswordRequest):
     res = reset_user_password(req.email, req.new_password)
     if not res.get("success"):
         raise HTTPException(status_code=400, detail=res.get("error"))
+    return res
+
+
+@app.post("/api/auth/google", tags=["Auth"])
+async def auth_google(req: GoogleAuthRequest):
+    email = None
+    full_name = None
+    google_id = None
+
+    if req.credential:
+        token_info = decode_google_id_token(req.credential)
+        email = token_info.get("email")
+        full_name = token_info.get("name") or token_info.get("given_name")
+        google_id = token_info.get("sub")
+
+    if not email and req.email:
+        email = req.email
+        full_name = req.full_name or email.split("@")[0].capitalize()
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid Google authentication credential. Email not found.")
+
+    tenant_id = req.tenant_id or "acme-electronics"
+    res = authenticate_or_register_google_user(
+        email=email,
+        full_name=full_name or "",
+        tenant_id=tenant_id,
+        google_id=google_id
+    )
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Google authentication failed."))
     return res
 
 

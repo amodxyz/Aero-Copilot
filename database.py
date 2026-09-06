@@ -512,6 +512,112 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
     }
 
 
+def authenticate_or_register_google_user(email: str, full_name: str = "", tenant_id: str = "acme-electronics", google_id: Optional[str] = None) -> Dict[str, Any]:
+    """Authenticates an existing user via Google or provisions a new user with Google OAuth credentials."""
+    import secrets
+    email_clean = email.strip().lower()
+    name_clean = full_name.strip() if full_name else email_clean.split("@")[0].capitalize()
+    now_iso = datetime.datetime.now().isoformat()
+    expires_at = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+    token = secrets.token_urlsafe(32)
+
+    # 1. Try PostgreSQL (Neon)
+    pg_conn = get_postgres_connection()
+    if pg_conn:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = pg_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = %s", (email_clean,))
+            user = cur.fetchone()
+            if user:
+                user_dict = dict(user)
+                cur.execute(
+                    "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                    (token, user_dict["user_id"], user_dict["tenant_id"], now_iso, expires_at)
+                )
+                pg_conn.close()
+                return {
+                    "success": True,
+                    "token": token,
+                    "user": {
+                        "user_id": user_dict["user_id"],
+                        "tenant_id": user_dict["tenant_id"],
+                        "email": user_dict["email"],
+                        "full_name": user_dict["full_name"],
+                        "role": user_dict["role"]
+                    }
+                }
+            else:
+                user_id = f"usr-{secrets.token_hex(4)}"
+                pwd_hash = hash_password(secrets.token_urlsafe(16))
+                cur.execute(
+                    "INSERT INTO users (user_id, tenant_id, email, password_hash, full_name, role, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (user_id, tenant_id, email_clean, pwd_hash, name_clean, "OWNER", now_iso)
+                )
+                cur.execute(
+                    "INSERT INTO auth_tokens (token, user_id, tenant_id, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)",
+                    (token, user_id, tenant_id, now_iso, expires_at)
+                )
+                pg_conn.close()
+                return {
+                    "success": True,
+                    "token": token,
+                    "user": {
+                        "user_id": user_id,
+                        "tenant_id": tenant_id,
+                        "email": email_clean,
+                        "full_name": name_clean,
+                        "role": "OWNER"
+                    }
+                }
+        except Exception as e:
+            print(f"[Database] Postgres Google Auth sync error: {e}")
+
+    # 2. SQLite local database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email_clean,))
+    user = cursor.fetchone()
+    if user:
+        user_dict = dict(user)
+        cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_dict["user_id"], user_dict["tenant_id"], now_iso, expires_at))
+        conn.commit()
+        conn.close()
+        return {
+            "success": True,
+            "token": token,
+            "user": {
+                "user_id": user_dict["user_id"],
+                "tenant_id": user_dict["tenant_id"],
+                "email": user_dict["email"],
+                "full_name": user_dict["full_name"],
+                "role": user_dict["role"]
+            }
+        }
+    else:
+        user_id = f"usr-{secrets.token_hex(4)}"
+        pwd_hash = hash_password(secrets.token_urlsafe(16))
+        cursor.execute(
+            "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, tenant_id, email_clean, pwd_hash, name_clean, "OWNER", now_iso)
+        )
+        cursor.execute("INSERT INTO auth_tokens VALUES (?, ?, ?, ?, ?)", (token, user_id, tenant_id, now_iso, expires_at))
+        conn.commit()
+        conn.close()
+        return {
+            "success": True,
+            "token": token,
+            "user": {
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "email": email_clean,
+                "full_name": name_clean,
+                "role": "OWNER"
+            }
+        }
+
+
+
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """Resolves an auth token to user session data from Neon PG or SQLite."""
     if not token:
