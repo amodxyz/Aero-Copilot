@@ -240,52 +240,36 @@ async function logoutUser(showNotification = true) {
     }
 }
 
-// Expose logoutUser and Google Auth globally to window
-window.logoutUser = logoutUser;
+// ----------------- Firebase Auth & Google Integration ----------------- //
+const firebaseConfig = {
+  apiKey: "AIzaSyAd2gOObHMMrr7Uu1RhpCm6QuxrACsYFqQ",
+  authDomain: "aero-copilot.firebaseapp.com",
+  projectId: "aero-copilot",
+  storageBucket: "aero-copilot.firebasestorage.app",
+  messagingSenderId: "97042473581",
+  appId: "1:97042473581:web:42f48afba40684ccaf9564",
+  measurementId: "G-0MV1GY3LX5"
+};
 
-// Google OAuth Sign-in & Sign-up Handler
-async function handleGoogleCredentialResponse(response) {
-    if (!response || !response.credential) {
-        alert("Google authentication did not return a valid credential.");
-        return;
-    }
+let firebaseApp = null;
+let firebaseAuth = null;
 
-    const regTenantSelect = document.getElementById("gateRegTenantSelect");
-    const tenantId = (regTenantSelect && regTenantSelect.value) ? regTenantSelect.value : (currentTenantId || "acme-electronics");
-
-    showToast("Authenticating with Google...", "⚡");
-
+function initFirebaseAuth() {
     try {
-        const res = await fetch("/api/auth/google", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                credential: response.credential,
-                tenant_id: tenantId
-            })
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-            authToken = data.token;
-            currentUser = data.user;
-            localStorage.setItem("aero_auth_token", authToken);
-            if (currentUser && currentUser.tenant_id) {
-                currentTenantId = currentUser.tenant_id;
-                localStorage.setItem("aero_active_tenant", currentTenantId);
-            }
-            showToast(`Welcome, ${currentUser.full_name || currentUser.email}!`, "🎉");
-            showDashboard(currentUser);
-        } else {
-            alert(data.detail || "Google authentication failed.");
+        if (window.firebase && !firebase.apps.length) {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            firebaseAuth = firebase.auth();
+        } else if (window.firebase && firebase.apps.length) {
+            firebaseApp = firebase.app();
+            firebaseAuth = firebase.auth();
         }
-    } catch (err) {
-        console.error("Google auth request error:", err);
-        alert("Could not connect to authentication server.");
+    } catch (e) {
+        console.warn("[Firebase] Init notice:", e);
     }
 }
 
-window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+// Expose logoutUser and Google Auth globally to window
+window.logoutUser = logoutUser;
 
 function triggerFallbackGoogleAuth() {
     const userEmail = prompt("Sign in with Google Account:\nEnter your Google Email address:", "owner@acme.com");
@@ -327,27 +311,70 @@ function triggerFallbackGoogleAuth() {
     });
 }
 
-window.triggerGoogleAuth = function() {
-    if (window.google && window.google.accounts && window.google.accounts.id) {
+window.triggerGoogleAuth = async function() {
+    initFirebaseAuth();
+
+    const regTenantSelect = document.getElementById("gateRegTenantSelect");
+    const tenantId = (regTenantSelect && regTenantSelect.value) ? regTenantSelect.value : (currentTenantId || "acme-electronics");
+
+    if (window.firebase && firebase.auth) {
         try {
-            window.google.accounts.id.initialize({
-                client_id: window.GOOGLE_CLIENT_ID || "1038592389142-dummyclientid.apps.googleusercontent.com",
-                callback: handleGoogleCredentialResponse,
-                auto_select: false,
-                cancel_on_tap_outside: true
+            showToast("Opening Google Sign-In...", "⚡");
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.addScope("email");
+            provider.addScope("profile");
+            
+            const result = await firebase.auth().signInWithPopup(provider);
+            const user = result.user;
+            const idToken = await user.getIdToken();
+
+            showToast("Authenticating session...", "⚡");
+
+            const res = await fetch("/api/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    credential: idToken,
+                    email: user.email,
+                    full_name: user.displayName || (user.email ? user.email.split("@")[0] : "Google User"),
+                    tenant_id: tenantId
+                })
             });
-            window.google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    triggerFallbackGoogleAuth();
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                authToken = data.token;
+                currentUser = data.user;
+                localStorage.setItem("aero_auth_token", authToken);
+                if (currentUser && currentUser.tenant_id) {
+                    currentTenantId = currentUser.tenant_id;
+                    localStorage.setItem("aero_active_tenant", currentTenantId);
                 }
-            });
-        } catch (e) {
-            triggerFallbackGoogleAuth();
+                showToast(`Welcome back, ${currentUser.full_name || currentUser.email}!`, "🎉");
+                showDashboard(currentUser);
+            } else {
+                alert(data.detail || "Google authentication failed on server.");
+            }
+            return;
+        } catch (error) {
+            console.error("[Firebase] Sign-in error:", error);
+            if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
+                showToast("Sign-in cancelled", "ℹ️");
+                return;
+            }
+            if (error.code === "auth/unauthorized-domain") {
+                console.warn("[Firebase] Domain not authorized yet in Firebase Console. Using fallback prompt.");
+                triggerFallbackGoogleAuth();
+                return;
+            }
+            alert("Firebase Google Auth: " + (error.message || error.code));
+            return;
         }
-    } else {
-        triggerFallbackGoogleAuth();
     }
+
+    triggerFallbackGoogleAuth();
 };
+
 
 window.fillLogin = function(email, pwd) {
     const e = document.getElementById("gateLoginEmail");
