@@ -50,13 +50,18 @@ class EmployeeTaskManager:
 
     def list_shifts(self, shift_date: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves shifts for the tenant."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
         query = "SELECT * FROM employee_shifts WHERE tenant_id = ?"
         params: List[Any] = [self.tenant_id]
         if shift_date:
             query += " AND shift_date = ?"
             params.append(shift_date)
         query += " ORDER BY shift_date DESC, start_time ASC"
-        return query_all(query, tuple(params))
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
 
     def get_productivity_report(self) -> Dict[str, Any]:
         """

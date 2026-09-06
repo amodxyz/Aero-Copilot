@@ -459,6 +459,7 @@ async def get_products(query: str = "", tid: str = Depends(resolve_tenant_id)):
 
 
 @app.get("/api/briefing", tags=["Operations"])
+@app.get("/api/morning-brief", tags=["Operations"])
 async def get_briefing(date: Optional[str] = None, tid: str = Depends(resolve_tenant_id)):
     return generate_daily_briefing(date, tenant_id=tid)
 
@@ -517,18 +518,25 @@ async def export_operations_csv(tid: str = Depends(resolve_tenant_id)):
 # ---------------- Google Cloud Scheduler Automation ---------------- #
 
 @app.post("/api/cron/daily-report", tags=["Automation"])
-async def trigger_daily_cron_report(req: Optional[CronReportRequest] = None):
+async def trigger_daily_cron_report(
+    req: Optional[CronReportRequest] = None,
+    tenant_id: Optional[str] = Query(default=None),
+    channel: Optional[str] = Query(default=None),
+    notify: Optional[bool] = Query(default=None)
+):
     """
     Automated execution endpoint triggered daily by Google Cloud Scheduler.
     Compiles daily sales totals & inventory alerts across all tenants and
     dispatches reports to Slack, Email, and WhatsApp.
     """
-    request_data = req or CronReportRequest()
     dispatcher = MultiChannelDispatcher()
     
-    target_tenants = [request_data.tenant_id] if request_data.tenant_id else [t["tenant_id"] for t in list_all_tenants()]
+    target_tenant_id = (req.tenant_id if req else None) or tenant_id
+    target_channel = (req.channel if req else None) or channel or "all"
+    should_notify = req.notify if (req and hasattr(req, 'notify')) else (notify if notify is not None else True)
     
-    channels_to_use = ["slack", "email", "whatsapp"] if request_data.channel.lower() in ("all", "multi") else [request_data.channel.lower()]
+    target_tenants = [target_tenant_id] if target_tenant_id else [t["tenant_id"] for t in list_all_tenants()]
+    channels_to_use = ["slack", "email", "whatsapp"] if target_channel.lower() in ("all", "multi") else [target_channel.lower()]
     
     dispatch_results = []
     for tid in target_tenants:
@@ -539,7 +547,7 @@ async def trigger_daily_cron_report(req: Optional[CronReportRequest] = None):
             "dispatched": False,
             "channels": {}
         }
-        if request_data.notify:
+        if should_notify:
             res = dispatcher.dispatch_daily_report(tenant_id=tid, channels=channels_to_use)
             report_data["dispatched"] = True
             report_data["channels"] = res.get("dispatches", {})

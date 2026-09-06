@@ -28,23 +28,17 @@ class ExpenseTracker:
         amount_float = round(float(amount), 2)
         category_clean = category.strip().title()
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
+        execute_mutation(
             """
             INSERT INTO expenses (tenant_id, date, category, description, amount, payment_method)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (self.tenant_id, expense_date, category_clean, description.strip(), amount_float, payment_method)
         )
-        expense_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
 
         return {
             "success": True,
             "tenant_id": self.tenant_id,
-            "expense_id": expense_id,
             "date": expense_date,
             "category": category_clean,
             "description": description.strip(),
@@ -54,18 +48,24 @@ class ExpenseTracker:
 
     def get_expenses(self, date: Optional[str] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """Lists expenses for the tenant, optionally filtered by date and category."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
         query = "SELECT * FROM expenses WHERE tenant_id = ?"
         params: List[Any] = [self.tenant_id]
 
         if date:
             query += " AND date = ?"
             params.append(date)
+
         if category:
             query += " AND category = ?"
             params.append(category.strip().title())
 
         query += " ORDER BY date DESC, expense_id DESC"
-        return query_all(query, tuple(params))
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
 
     def get_financial_summary(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict[str, Any]:
         """

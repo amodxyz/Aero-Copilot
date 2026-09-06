@@ -15,7 +15,16 @@ from tools import (
     list_daily_tasks,
     create_operational_task,
     generate_daily_briefing,
-    create_sales_order
+    create_sales_order,
+    log_operational_expense,
+    get_expense_summary,
+    list_expenses,
+    schedule_employee_shift,
+    list_employee_shifts,
+    get_employee_productivity,
+    add_customer_review,
+    get_customer_feedback_report,
+    dispatch_morning_briefing
 )
 from agent import agent_instance
 from main import app
@@ -496,6 +505,192 @@ def test_google_authentication_flow():
     login_data = res_login.json()
     assert login_data["success"] is True
     assert login_data["user"]["user_id"] == data["user"]["user_id"]
+
+
+def test_expenses_module_tools_and_api():
+    """Verify operational expense logging, summary aggregation, and REST endpoints."""
+    client = TestClient(app)
+    tid = "acme-electronics"
+
+    # 1. Log an expense via tool
+    res = log_operational_expense(
+        category="Packaging & Shipping",
+        description="Priority Courier Boxes",
+        amount=145.50,
+        payment_method="CARD",
+        tenant_id=tid
+    )
+    assert res["success"] is True
+    assert res["amount"] == 145.50
+
+    # 2. Get expense summary
+    summary = get_expense_summary(tenant_id=tid)
+    assert summary["tenant_id"] == tid
+    assert summary["total_operating_expenses"] >= 145.50
+    assert "expense_categories" in summary
+
+    # 3. Test REST endpoints
+    exp_list_resp = client.get("/api/expenses", headers={"X-Tenant-ID": tid})
+    assert exp_list_resp.status_code == 200
+    assert isinstance(exp_list_resp.json(), list)
+
+    exp_summary_resp = client.get("/api/expenses/summary", headers={"X-Tenant-ID": tid})
+    assert exp_summary_resp.status_code == 200
+    assert exp_summary_resp.json()["total_operating_expenses"] >= 145.50
+
+    log_resp = client.post("/api/expenses/log", json={
+        "category": "Software Subscriptions",
+        "amount": 79.00,
+        "description": "Figma Team Seat",
+        "payment_method": "CARD"
+    }, headers={"X-Tenant-ID": tid})
+    assert log_resp.status_code == 200
+    assert log_resp.json()["success"] is True
+
+
+def test_employee_shifts_and_productivity():
+    """Verify shift scheduling, shift listing, productivity calculation, and REST endpoints."""
+    client = TestClient(app)
+    tid = "beancrafters-cafe"
+
+    # 1. Schedule a shift via tool
+    shift_date = datetime.date.today().isoformat()
+    res = schedule_employee_shift(
+        employee_name="Maria Santos",
+        role="Lead Barista",
+        shift_date=shift_date,
+        start_time="07:00",
+        end_time="15:00",
+        tenant_id=tid
+    )
+    assert res["success"] is True
+    assert res["employee_name"] == "Maria Santos"
+
+    # 2. List shifts
+    shifts_res = list_employee_shifts(tenant_id=tid)
+    assert shifts_res["tenant_id"] == tid
+    assert shifts_res["count"] >= 1
+    assert any(s["employee_name"] == "Maria Santos" for s in shifts_res["shifts"])
+
+    # 3. Get productivity
+    prod_res = get_employee_productivity(tenant_id=tid)
+    assert prod_res["tenant_id"] == tid
+    assert "team_completion_rate_pct" in prod_res
+    assert prod_res["total_tasks"] >= 0
+
+    # 4. REST endpoints
+    shifts_api = client.get("/api/employees/shifts", headers={"X-Tenant-ID": tid})
+    assert shifts_api.status_code == 200
+    assert isinstance(shifts_api.json(), list)
+
+    prod_api = client.get("/api/employees/productivity", headers={"X-Tenant-ID": tid})
+    assert prod_api.status_code == 200
+    assert "team_completion_rate_pct" in prod_api.json()
+
+    schedule_api = client.post("/api/employees/shifts/schedule", json={
+        "employee_name": "Liam Vance",
+        "role": "Inventory Specialist",
+        "shift_date": shift_date,
+        "start_time": "09:00",
+        "end_time": "17:00"
+    }, headers={"X-Tenant-ID": tid})
+    assert schedule_api.status_code == 200
+    assert schedule_api.json()["success"] is True
+
+
+def test_customer_feedback_and_nps():
+    """Verify customer review addition, NPS aggregation, and REST endpoints."""
+    client = TestClient(app)
+    tid = "nova-apparel"
+
+    # 1. Add review via tool
+    rev_res = add_customer_review(
+        customer_name="Chloe Jenkins",
+        rating=5,
+        feedback_text="Absolutely love the material quality and fast shipping!",
+        source="Online Store",
+        tenant_id=tid
+    )
+    assert rev_res["success"] is True
+    assert rev_res["rating"] == 5
+
+    # 2. Get feedback report
+    report = get_customer_feedback_report(tenant_id=tid)
+    assert report["tenant_id"] == tid
+    assert report["total_reviews"] >= 1
+    assert "nps_score" in report
+    assert "sentiment_breakdown" in report
+
+    # 3. REST endpoints
+    rep_api = client.get("/api/feedback/report", headers={"X-Tenant-ID": tid})
+    assert rep_api.status_code == 200
+    assert rep_api.json()["total_reviews"] >= 1
+
+    add_api = client.post("/api/feedback/review", json={
+        "customer_name": "Dave Miller",
+        "rating": 4,
+        "feedback_text": "Good fit, sizing was accurate.",
+        "source": "POS Kiosk"
+    }, headers={"X-Tenant-ID": tid})
+    assert add_api.status_code == 200
+    assert add_api.json()["success"] is True
+
+
+def test_morning_brief_and_cron_dispatch():
+    """Verify morning brief generation, cron webhook dispatch, and REST endpoints."""
+    client = TestClient(app)
+    tid = "acme-electronics"
+
+    # 1. Dispatch briefing via tool
+    res = dispatch_morning_briefing(channels="slack", tenant_id=tid)
+    assert res["success"] is True
+    assert "dispatches" in res
+
+    # 2. REST endpoints
+    brief_api = client.get("/api/morning-brief", headers={"X-Tenant-ID": tid})
+    assert brief_api.status_code == 200
+    assert "briefing_date" in brief_api.json()
+    assert brief_api.json()["tenant_id"] == tid
+
+    cron_api = client.post("/api/cron/daily-report?tenant_id=acme-electronics")
+    assert cron_api.status_code == 200
+    assert cron_api.json()["status"] == "SUCCESS"
+
+
+def test_agent_rule_engine_module_prompts():
+    """Verify natural language and quick-menu routing for all 4 modules in rule engine."""
+    tid = "acme-electronics"
+
+    # Direct rule engine menu routing
+    r6 = agent_instance._process_with_rule_engine("6", tenant_id=tid)
+    assert "Customer" in r6["reply"] or "Sentiment" in r6["reply"] or "Feedback" in r6["reply"]
+
+    r7 = agent_instance._process_with_rule_engine("7", tenant_id=tid)
+    assert "Profit & Loss" in r7["reply"] or "Expense" in r7["reply"] or "expenses" in r7["reply"].lower()
+
+    r8 = agent_instance._process_with_rule_engine("8", tenant_id=tid)
+    assert "Employee Shift" in r8["reply"] or "Shift" in r8["reply"] or "shifts" in r8["reply"].lower()
+
+    r9 = agent_instance._process_with_rule_engine("9", tenant_id=tid)
+    assert "Productivity" in r9["reply"] or "productivity" in r9["reply"].lower()
+
+    r10 = agent_instance._process_with_rule_engine("10", tenant_id=tid)
+    assert "Morning Briefing" in r10["reply"] or "briefing" in r10["reply"].lower()
+
+    # Natural language queries via rule engine
+    r_nl_exp = agent_instance._process_with_rule_engine("Show our operational expenses and spending breakdown", tenant_id=tid)
+    assert any(tc["tool"] == "get_expense_summary" for tc in r_nl_exp["tool_calls"])
+
+    r_nl_shift = agent_instance._process_with_rule_engine("What employee shifts are scheduled?", tenant_id=tid)
+    assert any(tc["tool"] == "list_employee_shifts" for tc in r_nl_shift["tool_calls"])
+
+    r_nl_nps = agent_instance._process_with_rule_engine("What is our latest customer feedback and NPS score?", tenant_id=tid)
+    assert any(tc["tool"] == "get_customer_feedback_report" for tc in r_nl_nps["tool_calls"])
+
+    r_nl_cron = agent_instance._process_with_rule_engine("Dispatch morning briefing to all webhook channels", tenant_id=tid)
+    assert any(tc["tool"] == "dispatch_morning_briefing" for tc in r_nl_cron["tool_calls"])
+
+
 
 
 

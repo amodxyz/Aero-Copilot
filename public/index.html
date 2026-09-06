@@ -272,29 +272,31 @@
                     </a>
 
                     <div class="nav-section-title">MODULES & EXTENSIONS</div>
-                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavExpenses">
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-expenses" id="sideNavExpenses">
                         <span class="nav-item-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                         </span>
                         <span class="nav-item-text">Expense Tracker</span>
+                        <span class="nav-item-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">P&L</span>
                     </a>
-                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavShifts">
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-shifts" id="sideNavShifts">
                         <span class="nav-item-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         </span>
                         <span class="nav-item-text">Employee Shifts</span>
                     </a>
-                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavReviews">
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-reviews" id="sideNavReviews">
                         <span class="nav-item-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                         </span>
                         <span class="nav-item-text">Customer Reviews</span>
                     </a>
-                    <a href="javascript:void(0)" class="sidebar-nav-item" id="sideNavMorningBrief">
+                    <a href="javascript:void(0)" class="sidebar-nav-item" data-tab-target="tab-morning-brief" id="sideNavMorningBrief">
                         <span class="nav-item-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                         </span>
                         <span class="nav-item-text">Morning Brief Cron</span>
+                        <span class="nav-item-badge" style="background: rgba(52, 211, 153, 0.15); color: #34d399;">Cron</span>
                     </a>
 
                     <div class="nav-section-title">INTEGRATIONS STATUS</div>
@@ -472,6 +474,22 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             <span>Tasks</span>
                         </button>
+                        <button class="tab-btn" data-tab="tab-expenses">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                            <span>Expenses</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-shifts">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span>Shifts</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-reviews">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            <span>Reviews</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tab-morning-brief">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                            <span>Morning Brief</span>
+                        </button>
                     </div>
 
                     <!-- Tab 1: Inventory Monitor -->
@@ -626,6 +644,303 @@
                             <!-- Populated dynamically -->
                         </div>
                     </div>
+
+                    <!-- Tab 6: Expense Tracker & P&L Analysis -->
+                    <div class="tab-content" id="tab-expenses">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Operational Expenses & P&L Analysis</h3>
+                                <p class="tab-subtitle">Real-time Cost of Goods Sold (COGS), OpEx breakdown and net profit margins</p>
+                            </div>
+                            <div class="header-btns">
+                                <button class="btn-sm btn-primary-sm" id="btnLogExpenseModalOpen">+ Log Expense</button>
+                                <button class="btn-sm" id="btnRefreshExpenses">↻ Refresh</button>
+                            </div>
+                        </div>
+
+                        <!-- P&L Financial Scorecard -->
+                        <div class="metrics-grid" style="margin-bottom: 1.5rem; padding: 0;">
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Gross Sales Revenue</span>
+                                    <div class="metric-icon revenue-bg">💵</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-success" id="expenseGrossRev">$0.00</h3>
+                                    <span class="metric-sub" id="expenseOrderCount">0 Orders</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Cost of Goods (COGS)</span>
+                                    <div class="metric-icon alert-bg">📦</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-warning" id="expenseCogs">$0.00</h3>
+                                    <span class="metric-sub">Direct inventory unit cost</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Operating Expenses (OpEx)</span>
+                                    <div class="metric-icon tasks-bg">📊</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-danger" id="expenseTotalOpex">$0.00</h3>
+                                    <span class="metric-sub">Utilities, Ads, Supplies</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Net Operating Profit</span>
+                                    <div class="metric-icon orders-bg">📈</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-primary" id="expenseNetProfit">$0.00</h3>
+                                    <span class="metric-sub" id="expenseNetMargin">Net Margin: 0.0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive" style="margin-top: 1rem;">
+                            <div class="tab-header-actions" style="margin-bottom: 0.75rem;">
+                                <div>
+                                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main);">Recorded Expense Logs</h4>
+                                    <p class="tab-subtitle">Tenant operational transactions and payment records</p>
+                                </div>
+                            </div>
+                            <table class="data-table" id="expensesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>Amount ($)</th>
+                                        <th>Payment Method</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expensesTableBody">
+                                    <tr><td colspan="5" class="text-center">Loading operational expenses...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 7: Employee Shifts & Team Productivity -->
+                    <div class="tab-content" id="tab-shifts">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Employee Shift Roster & Team Productivity</h3>
+                                <p class="tab-subtitle">Manage staff schedules, task completion rates, and department workload</p>
+                            </div>
+                            <div class="header-btns">
+                                <button class="btn-sm btn-primary-sm" id="btnScheduleShiftModalOpen">+ Schedule Shift</button>
+                                <button class="btn-sm" id="btnRefreshShifts">↻ Refresh</button>
+                            </div>
+                        </div>
+
+                        <!-- Team Productivity Scorecard -->
+                        <div class="metrics-grid" style="margin-bottom: 1.5rem; padding: 0;">
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Team Completion Rate</span>
+                                    <div class="metric-icon revenue-bg">🎯</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-success" id="shiftTeamRate">0.0%</h3>
+                                    <span class="metric-sub">Completed vs assigned</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Total Assigned Tasks</span>
+                                    <div class="metric-icon orders-bg">📋</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val" id="shiftTotalTasks">0</h3>
+                                    <span class="metric-sub">Active tenant queue</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Completed Action Items</span>
+                                    <div class="metric-icon tasks-bg">✅</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-primary" id="shiftCompletedTasks">0</h3>
+                                    <span class="metric-sub">Resolved by staff</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Overdue Items</span>
+                                    <div class="metric-icon alert-bg">⚠️</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-warning" id="shiftOverdueTasks">0</h3>
+                                    <span class="metric-sub">Requires immediate action</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Scheduled Shift Roster</h4>
+                            <table class="data-table" id="shiftsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Employee Name</th>
+                                        <th>Role / Department</th>
+                                        <th>Shift Date</th>
+                                        <th>Scheduled Hours</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shiftsTableBody">
+                                    <tr><td colspan="5" class="text-center">Loading employee shift roster...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 8: Customer Reviews & NPS Intelligence -->
+                    <div class="tab-content" id="tab-reviews">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Customer Reviews & NPS Sentiment Intelligence</h3>
+                                <p class="tab-subtitle">Real-time feedback monitoring from POS, Google Reviews, Yelp, and Shopify</p>
+                            </div>
+                            <div class="header-btns">
+                                <button class="btn-sm btn-primary-sm" id="btnAddReviewModalOpen">+ Add Review</button>
+                                <button class="btn-sm" id="btnRefreshReviews">↻ Refresh</button>
+                            </div>
+                        </div>
+
+                        <!-- Feedback Scorecard -->
+                        <div class="metrics-grid" style="margin-bottom: 1.5rem; padding: 0;">
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Net Promoter Score (NPS)</span>
+                                    <div class="metric-icon revenue-bg">🏆</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-primary" id="reviewNpsScore">+0</h3>
+                                    <span class="metric-sub">Promoters vs Detractors</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Average Customer Rating</span>
+                                    <div class="metric-icon orders-bg">⭐</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-warning" id="reviewAvgRating">0.0 / 5.0</h3>
+                                    <span class="metric-sub" id="reviewTotalCount">0 verified reviews</span>
+                                </div>
+                            </div>
+                            <div class="metric-card" style="grid-column: span 2;">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Sentiment Distribution</span>
+                                    <div class="metric-icon tasks-bg">📊</div>
+                                </div>
+                                <div class="metric-data">
+                                    <div id="reviewSentimentBar" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.25rem;">
+                                        <span class="trend-pill trend-up" id="reviewPositiveCount">🟢 0 Positive</span>
+                                        <span class="trend-pill trend-neutral" id="reviewNeutralCount">🟡 0 Neutral</span>
+                                        <span class="trend-pill trend-warning" id="reviewNegativeCount">🔴 0 Negative</span>
+                                    </div>
+                                    <span class="metric-sub" style="margin-top: 0.35rem;">Real-time NLP sentiment tagging</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actionable Insights Banner -->
+                        <div id="reviewInsightsCard" style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem;">
+                            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">💡 AI Operational Recommendations</h4>
+                            <div id="reviewInsightsList" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;">
+                                <span>Loading insights...</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Verified Customer Review Stream</h4>
+                            <table class="data-table" id="reviewsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Rating</th>
+                                        <th>Sentiment</th>
+                                        <th>Feedback Comment</th>
+                                        <th>Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reviewsTableBody">
+                                    <tr><td colspan="6" class="text-center">Loading customer feedback telemetry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 9: Morning Brief Cron & Multi-Channel Dispatcher -->
+                    <div class="tab-content" id="tab-morning-brief">
+                        <div class="tab-header-actions">
+                            <div>
+                                <h3>Executive Morning Briefing & Cloud Scheduler</h3>
+                                <p class="tab-subtitle">Daily executive summary automation with instant Slack, WhatsApp & Email dispatch</p>
+                            </div>
+                            <div class="header-btns">
+                                <button class="btn-sm btn-primary-sm" id="btnTriggerMorningBrief">⚡ Generate Live Briefing</button>
+                                <button class="btn-sm" id="btnDispatchMorningBrief">🚀 Dispatch to Webhooks</button>
+                            </div>
+                        </div>
+
+                        <!-- Cron Scheduler Status Card -->
+                        <div class="metrics-grid" style="margin-bottom: 1.5rem; padding: 0;">
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Cloud Scheduler Cron</span>
+                                    <div class="metric-icon revenue-bg">⏰</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val text-success">ACTIVE</h3>
+                                    <span class="metric-sub">Daily 07:00 AM UTC (0 7 * * *)</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Target Endpoint</span>
+                                    <div class="metric-icon orders-bg">🔗</div>
+                                </div>
+                                <div class="metric-data">
+                                    <h3 class="metric-val" style="font-size: 1.1rem; font-family: var(--font-mono);">/api/cron/daily-report</h3>
+                                    <span class="metric-sub">Multi-tenant serverless execution</span>
+                                </div>
+                            </div>
+                            <div class="metric-card" style="grid-column: span 2;">
+                                <div class="metric-card-top">
+                                    <span class="metric-label">Connected Webhook Dispatchers</span>
+                                    <div class="metric-icon tasks-bg">📡</div>
+                                </div>
+                                <div class="metric-data">
+                                    <div style="display: flex; gap: 0.6rem; align-items: center; margin-top: 0.25rem;">
+                                        <span class="trend-pill trend-up">🟢 Slack Bot</span>
+                                        <span class="trend-pill trend-up">🟢 WhatsApp Business</span>
+                                        <span class="trend-pill trend-up">🟢 SendGrid Email</span>
+                                    </div>
+                                    <span class="metric-sub" style="margin-top: 0.35rem;">Auto-dispatches consolidated morning digest</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Morning Briefing Output Card -->
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-main);">🌅 Live Briefing Telemetry Preview</h4>
+                                <span class="trend-pill trend-up" id="briefStatusTag">● Live Telemetry Ready</span>
+                            </div>
+                            <div id="morningBriefDisplay" style="font-family: var(--font-sans); line-height: 1.6; color: var(--text-main); white-space: pre-wrap; background: var(--bg-input); padding: 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">Click "⚡ Generate Live Briefing" to compile latest operational metrics across POS, Warehouse and Tasks.</div>
+                        </div>
+                    </div>
                 </section>
             </main>
             </div> <!-- Close .saas-main-container -->
@@ -750,6 +1065,138 @@
             <div class="modal-actions">
                 <button class="btn-ghost" id="btnCancelTaskModal">Cancel</button>
                 <button class="btn-primary" id="btnConfirmAddTask">Create Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Logging New Expense -->
+    <div class="modal-overlay" id="addExpenseModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                </div>
+                <div>
+                    <h3>Log Operational Expense</h3>
+                    <p>Track business expenditures, supplies, and marketing costs</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="expenseCategoryInput" class="styled-select">
+                    <option value="Marketing">📢 Marketing & Ads</option>
+                    <option value="Utilities">💡 Utilities & Software</option>
+                    <option value="Supplies" selected>📦 Packaging & Supplies</option>
+                    <option value="Logistics">🚚 Shipping & Logistics</option>
+                    <option value="Operations">⚙️ General Operations</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="expenseDescInput" placeholder="e.g. Google Ads Campaign Q3" required autocomplete="off">
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Amount ($)</label>
+                    <input type="number" id="expenseAmountInput" step="0.01" placeholder="e.g. 150.00" required>
+                </div>
+                <div style="flex:1;">
+                    <label>Payment Method</label>
+                    <select id="expensePaymentInput" class="styled-select">
+                        <option value="CREDIT_CARD" selected>💳 Credit Card</option>
+                        <option value="BANK_TRANSFER">🏦 Bank Transfer</option>
+                        <option value="CASH">💵 Cash</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelExpenseModal">Cancel</button>
+                <button class="btn-primary" id="btnConfirmAddExpense">Save Expense</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Scheduling Employee Shift -->
+    <div class="modal-overlay" id="scheduleShiftModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div>
+                    <h3>Schedule Employee Shift</h3>
+                    <p>Assign working hours and roles to staff members</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Employee Name</label>
+                <input type="text" id="shiftEmployeeNameInput" placeholder="e.g. Sarah Jenkins" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Role / Position</label>
+                <input type="text" id="shiftRoleInput" placeholder="e.g. Floor Manager / Barista" value="Operations Associate" required autocomplete="off">
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Start Time</label>
+                    <input type="text" id="shiftStartTimeInput" value="08:00" placeholder="08:00">
+                </div>
+                <div style="flex:1;">
+                    <label>End Time</label>
+                    <input type="text" id="shiftEndTimeInput" value="17:00" placeholder="17:00">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelShiftModal">Cancel</button>
+                <button class="btn-primary" id="btnConfirmScheduleShift">Schedule Shift</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Adding Customer Review -->
+    <div class="modal-overlay" id="addReviewModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <div>
+                    <h3>Record Customer Review</h3>
+                    <p>Log customer feedback and compute sentiment rating</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" id="reviewCustNameInput" placeholder="e.g. Michael Smith" required autocomplete="off">
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.75rem;">
+                <div style="flex:1;">
+                    <label>Rating (1 - 5 Stars)</label>
+                    <select id="reviewRatingInput" class="styled-select">
+                        <option value="5" selected>⭐⭐⭐⭐⭐ 5 - Excellent</option>
+                        <option value="4">⭐⭐⭐⭐ 4 - Good</option>
+                        <option value="3">⭐⭐⭐ 3 - Average</option>
+                        <option value="2">⭐⭐ 2 - Poor</option>
+                        <option value="1">⭐ 1 - Terrible</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label>Feedback Source</label>
+                    <select id="reviewSourceInput" class="styled-select">
+                        <option value="Google Reviews" selected>Google Reviews</option>
+                        <option value="Shopify POS">Shopify POS</option>
+                        <option value="Yelp">Yelp</option>
+                        <option value="In-Store Feedback">In-Store Feedback</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Feedback Review Text</label>
+                <textarea id="reviewTextInput" class="styled-textarea" rows="3" placeholder="e.g. Fast checkout and friendly customer service!" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" id="btnCancelReviewModal">Cancel</button>
+                <button class="btn-primary" id="btnConfirmAddReview">Save Review</button>
             </div>
         </div>
     </div>

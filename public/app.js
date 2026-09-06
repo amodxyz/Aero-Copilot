@@ -19,6 +19,7 @@ let allTenantsCache = [...DEFAULT_BUSINESS_TENANTS];
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     setupEventListeners();
+    setupSidebarListeners();
     setupAuthListeners();
     setupSpeechRecognition();
     setupFloatingAgentWidget();
@@ -512,6 +513,9 @@ function refreshAllTenantData() {
     fetchForecast();
     fetchSales();
     fetchTasks();
+    fetchExpenses();
+    fetchShiftsAndProductivity();
+    fetchCustomerReviews();
 }
 
 // Helper for tenant-aware & authenticated fetch
@@ -577,7 +581,6 @@ function setupSidebarListeners() {
             e.preventDefault();
             const tabTarget = item.getAttribute("data-tab-target");
             const navTarget = item.getAttribute("data-nav-target");
-            const itemId = item.id;
 
             if (tabTarget) {
                 // Switch active tab on right dashboard panel
@@ -595,8 +598,18 @@ function setupSidebarListeners() {
 
                 const breadcrumb = document.getElementById("breadcrumbActiveSection");
                 const textEl = item.querySelector(".nav-item-text");
+                if (breadcrumb && textEl) breadcrumb.textContent = textEl.textContent;
+
                 if (tabTarget === "tab-analytics") {
                     setTimeout(() => fetchSales(), 50);
+                } else if (tabTarget === "tab-expenses") {
+                    setTimeout(() => fetchExpenses(), 50);
+                } else if (tabTarget === "tab-shifts") {
+                    setTimeout(() => fetchShiftsAndProductivity(), 50);
+                } else if (tabTarget === "tab-reviews") {
+                    setTimeout(() => fetchCustomerReviews(), 50);
+                } else if (tabTarget === "tab-morning-brief") {
+                    setTimeout(() => fetchMorningBrief(), 50);
                 }
 
                 closeMobileSidebar();
@@ -606,18 +619,6 @@ function setupSidebarListeners() {
                 const breadcrumb = document.getElementById("breadcrumbActiveSection");
                 if (breadcrumb) breadcrumb.textContent = "AI Copilot";
                 focusChatInput();
-                closeMobileSidebar();
-            } else if (itemId === "sideNavExpenses") {
-                sendChatMessage("What are our recent business expenses, run rate, and vendor breakdown?");
-                closeMobileSidebar();
-            } else if (itemId === "sideNavShifts") {
-                sendChatMessage("Show me the current employee shifts, assigned roles, and total hours scheduled.");
-                closeMobileSidebar();
-            } else if (itemId === "sideNavReviews") {
-                sendChatMessage("Analyze our latest customer feedback, ratings, and sentiment highlights.");
-                closeMobileSidebar();
-            } else if (itemId === "sideNavMorningBrief") {
-                sendChatMessage("Generate my daily executive morning briefing and dispatch report to webhook channels.");
                 closeMobileSidebar();
             }
         });
@@ -738,9 +739,222 @@ function setupEventListeners() {
 
             if (targetId === "tab-analytics") {
                 setTimeout(() => fetchSales(), 50);
+            } else if (targetId === "tab-expenses") {
+                setTimeout(() => fetchExpenses(), 50);
+            } else if (targetId === "tab-shifts") {
+                setTimeout(() => fetchShiftsAndProductivity(), 50);
+            } else if (targetId === "tab-reviews") {
+                setTimeout(() => fetchCustomerReviews(), 50);
+            } else if (targetId === "tab-morning-brief") {
+                setTimeout(() => fetchMorningBrief(), 50);
             }
         });
     });
+
+    // Refresh Buttons for Modules
+    const btnRefExp = document.getElementById("btnRefreshExpenses");
+    if (btnRefExp) {
+        btnRefExp.addEventListener("click", () => {
+            fetchExpenses();
+            showToast("Expenses & P&L refreshed", "💰");
+        });
+    }
+
+    const btnRefShifts = document.getElementById("btnRefreshShifts");
+    if (btnRefShifts) {
+        btnRefShifts.addEventListener("click", () => {
+            fetchShiftsAndProductivity();
+            showToast("Shifts & Productivity refreshed", "👥");
+        });
+    }
+
+    const btnRefReviews = document.getElementById("btnRefreshReviews");
+    if (btnRefReviews) {
+        btnRefReviews.addEventListener("click", () => {
+            fetchCustomerReviews();
+            showToast("Customer reviews refreshed", "⭐");
+        });
+    }
+
+    // Morning Briefing Triggers
+    const btnTriggerBrief = document.getElementById("btnTriggerMorningBrief");
+    if (btnTriggerBrief) {
+        btnTriggerBrief.addEventListener("click", () => {
+            fetchMorningBrief();
+            showToast("Morning briefing regenerated", "🌅");
+        });
+    }
+
+    const btnDispatchBrief = document.getElementById("btnDispatchMorningBrief");
+    if (btnDispatchBrief) {
+        btnDispatchBrief.addEventListener("click", () => {
+            dispatchMorningBrief(true);
+        });
+    }
+
+    // Log Expense Modal
+    const btnLogExpOpen = document.getElementById("btnLogExpenseModalOpen");
+    const modalLogExp = document.getElementById("addExpenseModal");
+    const btnCancelExp = document.getElementById("btnCancelExpenseModal");
+    const btnConfirmExp = document.getElementById("btnConfirmAddExpense");
+
+    if (btnLogExpOpen && modalLogExp) {
+        btnLogExpOpen.addEventListener("click", () => {
+            modalLogExp.style.display = "flex";
+        });
+    }
+    if (btnCancelExp && modalLogExp) {
+        btnCancelExp.addEventListener("click", () => {
+            modalLogExp.style.display = "none";
+        });
+    }
+    if (btnConfirmExp && modalLogExp) {
+        btnConfirmExp.addEventListener("click", async () => {
+            const catEl = document.getElementById("expenseCategoryInput");
+            const descEl = document.getElementById("expenseDescInput");
+            const amtEl = document.getElementById("expenseAmountInput");
+            const payEl = document.getElementById("expensePaymentInput");
+
+            const category = catEl ? catEl.value : "Operations";
+            const description = descEl ? descEl.value.trim() : "";
+            const amount = amtEl ? parseFloat(amtEl.value) : 0.0;
+            const payment_method = payEl ? payEl.value : "CREDIT_CARD";
+
+            if (!description || !amount || amount <= 0) {
+                alert("Please provide a valid description and positive amount.");
+                return;
+            }
+
+            try {
+                const res = await tenantFetch("/api/expenses/log", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ category, description, amount, payment_method })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Logged $${amount.toFixed(2)} for ${category}`, "💵");
+                    modalLogExp.style.display = "none";
+                    if (descEl) descEl.value = "";
+                    if (amtEl) amtEl.value = "";
+                    fetchExpenses();
+                } else {
+                    alert(`Failed to log expense: ${data.detail || 'Error'}`);
+                }
+            } catch (e) {
+                alert("Server connection failed.");
+            }
+        });
+    }
+
+    // Schedule Shift Modal
+    const btnSchedShiftOpen = document.getElementById("btnScheduleShiftModalOpen");
+    const modalSchedShift = document.getElementById("scheduleShiftModal");
+    const btnCancelShift = document.getElementById("btnCancelShiftModal");
+    const btnConfirmShift = document.getElementById("btnConfirmScheduleShift");
+
+    if (btnSchedShiftOpen && modalSchedShift) {
+        btnSchedShiftOpen.addEventListener("click", () => {
+            modalSchedShift.style.display = "flex";
+        });
+    }
+    if (btnCancelShift && modalSchedShift) {
+        btnCancelShift.addEventListener("click", () => {
+            modalSchedShift.style.display = "none";
+        });
+    }
+    if (btnConfirmShift && modalSchedShift) {
+        btnConfirmShift.addEventListener("click", async () => {
+            const nameEl = document.getElementById("shiftEmployeeNameInput");
+            const roleEl = document.getElementById("shiftRoleInput");
+            const startEl = document.getElementById("shiftStartTimeInput");
+            const endEl = document.getElementById("shiftEndTimeInput");
+
+            const employee_name = nameEl ? nameEl.value.trim() : "";
+            const role = roleEl ? roleEl.value.trim() : "Associate";
+            const start_time = startEl ? startEl.value.trim() || "08:00" : "08:00";
+            const end_time = endEl ? endEl.value.trim() || "17:00" : "17:00";
+
+            if (!employee_name) {
+                alert("Please enter employee name.");
+                return;
+            }
+
+            try {
+                const res = await tenantFetch("/api/employees/shifts/schedule", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ employee_name, role, start_time, end_time })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Scheduled shift for ${employee_name}`, "👤");
+                    modalSchedShift.style.display = "none";
+                    if (nameEl) nameEl.value = "";
+                    fetchShiftsAndProductivity();
+                } else {
+                    alert(`Failed to schedule shift: ${data.detail || 'Error'}`);
+                }
+            } catch (e) {
+                alert("Server connection failed.");
+            }
+        });
+    }
+
+    // Add Review Modal
+    const btnAddReviewOpen = document.getElementById("btnAddReviewModalOpen");
+    const modalAddReview = document.getElementById("addReviewModal");
+    const btnCancelReview = document.getElementById("btnCancelReviewModal");
+    const btnConfirmReview = document.getElementById("btnConfirmAddReview");
+
+    if (btnAddReviewOpen && modalAddReview) {
+        btnAddReviewOpen.addEventListener("click", () => {
+            modalAddReview.style.display = "flex";
+        });
+    }
+    if (btnCancelReview && modalAddReview) {
+        btnCancelReview.addEventListener("click", () => {
+            modalAddReview.style.display = "none";
+        });
+    }
+    if (btnConfirmReview && modalAddReview) {
+        btnConfirmReview.addEventListener("click", async () => {
+            const custEl = document.getElementById("reviewCustNameInput");
+            const rateEl = document.getElementById("reviewRatingInput");
+            const srcEl = document.getElementById("reviewSourceInput");
+            const textEl = document.getElementById("reviewTextInput");
+
+            const customer_name = custEl ? custEl.value.trim() : "";
+            const rating = rateEl ? parseInt(rateEl.value, 10) || 5 : 5;
+            const source = srcEl ? srcEl.value : "Google Reviews";
+            const feedback_text = textEl ? textEl.value.trim() : "";
+
+            if (!customer_name || !feedback_text) {
+                alert("Please enter customer name and feedback review text.");
+                return;
+            }
+
+            try {
+                const res = await tenantFetch("/api/feedback/review", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ customer_name, rating, feedback_text, source })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Review saved (${data.sentiment})`, "⭐");
+                    modalAddReview.style.display = "none";
+                    if (custEl) custEl.value = "";
+                    if (textEl) textEl.value = "";
+                    fetchCustomerReviews();
+                } else {
+                    alert(`Failed to add review: ${data.detail || 'Error'}`);
+                }
+            } catch (e) {
+                alert("Server connection failed.");
+            }
+        });
+    }
 
     // Chat Form
     const chatForm = document.getElementById("chatForm");
@@ -1913,5 +2127,210 @@ async function executeReorder(sku, quantity) {
         }
     } catch (err) {
         alert("Failed to submit purchase order.");
+    }
+}
+
+// ----------------- Modules & Extensions Data Fetchers ----------------- //
+
+async function fetchExpenses() {
+    try {
+        const [summaryRes, listRes] = await Promise.all([
+            tenantFetch("/api/expenses/summary"),
+            tenantFetch("/api/expenses")
+        ]);
+
+        if (summaryRes.ok) {
+            const summary = await summaryRes.json();
+            const grossRevEl = document.getElementById("expenseGrossRev");
+            const orderCountEl = document.getElementById("expenseOrderCount");
+            const cogsEl = document.getElementById("expenseCogs");
+            const opexEl = document.getElementById("expenseTotalOpex");
+            const netProfitEl = document.getElementById("expenseNetProfit");
+            const netMarginEl = document.getElementById("expenseNetMargin");
+
+            if (grossRevEl) grossRevEl.textContent = `$${Number(summary.gross_revenue || 0).toFixed(2)}`;
+            if (orderCountEl) orderCountEl.textContent = `${summary.order_count || 0} Orders`;
+            if (cogsEl) cogsEl.textContent = `$${Number(summary.cogs || 0).toFixed(2)}`;
+            if (opexEl) opexEl.textContent = `$${Number(summary.total_operating_expenses || 0).toFixed(2)}`;
+            if (netProfitEl) {
+                const profit = Number(summary.net_profit || 0);
+                netProfitEl.textContent = `$${profit.toFixed(2)}`;
+                netProfitEl.className = profit >= 0 ? "metric-val text-success" : "metric-val text-danger";
+            }
+            if (netMarginEl) netMarginEl.textContent = `Net Margin: ${Number(summary.net_margin_pct || 0).toFixed(1)}%`;
+        }
+
+        if (listRes.ok) {
+            const expenses = await listRes.json();
+            const tbody = document.getElementById("expensesTableBody");
+            if (tbody) {
+                if (expenses && expenses.length > 0) {
+                    tbody.innerHTML = expenses.map(e => `
+                        <tr>
+                            <td>${e.date}</td>
+                            <td><span class="trend-pill trend-neutral">${e.category}</span></td>
+                            <td><strong>${e.description}</strong></td>
+                            <td><span class="amount-val">$${Number(e.amount).toFixed(2)}</span></td>
+                            <td><span class="sku-pill">${e.payment_method}</span></td>
+                        </tr>
+                    `).join("");
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:var(--text-muted); padding: 1.5rem;">No operational expenses recorded for this tenant yet.</td></tr>`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error loading expenses:", err);
+    }
+}
+
+async function fetchShiftsAndProductivity() {
+    try {
+        const [prodRes, shiftsRes] = await Promise.all([
+            tenantFetch("/api/employees/productivity"),
+            tenantFetch("/api/employees/shifts")
+        ]);
+
+        if (prodRes.ok) {
+            const prod = await prodRes.json();
+            const rateEl = document.getElementById("shiftTeamRate");
+            const totalEl = document.getElementById("shiftTotalTasks");
+            const compEl = document.getElementById("shiftCompletedTasks");
+            const dueEl = document.getElementById("shiftOverdueTasks");
+
+            if (rateEl) rateEl.textContent = `${Number(prod.team_completion_rate_pct || 0).toFixed(1)}%`;
+            if (totalEl) totalEl.textContent = prod.total_tasks || 0;
+            if (compEl) compEl.textContent = prod.completed_tasks || 0;
+            if (dueEl) dueEl.textContent = prod.overdue_tasks || 0;
+        }
+
+        if (shiftsRes.ok) {
+            const shifts = await shiftsRes.json();
+            const tbody = document.getElementById("shiftsTableBody");
+            if (tbody) {
+                if (shifts && shifts.length > 0) {
+                    tbody.innerHTML = shifts.map(s => `
+                        <tr>
+                            <td><strong>${s.employee_name}</strong></td>
+                            <td><span class="trend-pill trend-neutral">${s.role}</span></td>
+                            <td>${s.shift_date}</td>
+                            <td><span class="sku-pill">${s.start_time} - ${s.end_time}</span></td>
+                            <td><span class="status-badge status-healthy"><span class="status-indicator-dot"></span>${s.status}</span></td>
+                        </tr>
+                    `).join("");
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:var(--text-muted); padding: 1.5rem;">No shifts scheduled for this tenant yet.</td></tr>`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error loading employee shifts:", err);
+    }
+}
+
+async function fetchCustomerReviews() {
+    try {
+        const res = await tenantFetch("/api/feedback/report");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const npsEl = document.getElementById("reviewNpsScore");
+        const ratingEl = document.getElementById("reviewAvgRating");
+        const totalEl = document.getElementById("reviewTotalCount");
+        const posEl = document.getElementById("reviewPositiveCount");
+        const neuEl = document.getElementById("reviewNeutralCount");
+        const negEl = document.getElementById("reviewNegativeCount");
+        const insightsList = document.getElementById("reviewInsightsList");
+        const tbody = document.getElementById("reviewsTableBody");
+
+        if (npsEl) npsEl.textContent = `${data.nps_score >= 0 ? '+' : ''}${data.nps_score || 0}`;
+        if (ratingEl) ratingEl.textContent = `${Number(data.average_rating || 0).toFixed(1)} / 5.0`;
+        if (totalEl) totalEl.textContent = `${data.total_reviews || 0} verified reviews`;
+
+        const sent = data.sentiment_breakdown || {};
+        if (posEl) posEl.textContent = `🟢 ${sent.POSITIVE || 0} Positive`;
+        if (neuEl) neuEl.textContent = `🟡 ${sent.NEUTRAL || 0} Neutral`;
+        if (negEl) negEl.textContent = `🔴 ${sent.NEGATIVE || 0} Negative`;
+
+        if (insightsList && data.actionable_insights) {
+            insightsList.innerHTML = data.actionable_insights.map(i => `<div>• ${i}</div>`).join("");
+        }
+
+        if (tbody) {
+            if (data.recent_reviews && data.recent_reviews.length > 0) {
+                tbody.innerHTML = data.recent_reviews.map(r => {
+                    const stars = "⭐".repeat(r.rating);
+                    const sentClass = r.sentiment === "POSITIVE" ? "status-healthy" : (r.sentiment === "NEGATIVE" ? "status-critical" : "status-warning");
+                    return `
+                        <tr>
+                            <td>${r.review_date || 'Today'}</td>
+                            <td><strong>${r.customer_name}</strong></td>
+                            <td><span style="letter-spacing: 2px;">${stars}</span></td>
+                            <td><span class="status-badge ${sentClass}"><span class="status-indicator-dot"></span>${r.sentiment}</span></td>
+                            <td>${r.feedback_text}</td>
+                            <td><span class="sku-pill">${r.source}</span></td>
+                        </tr>
+                    `;
+                }).join("");
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--text-muted); padding: 1.5rem;">No customer feedback recorded yet.</td></tr>`;
+            }
+        }
+    } catch (err) {
+        console.error("Error loading customer reviews:", err);
+    }
+}
+
+async function fetchMorningBrief() {
+    const display = document.getElementById("morningBriefDisplay");
+    if (display) display.innerHTML = `<em>Compiling morning briefing telemetry for [${currentTenantId}]...</em>`;
+    try {
+        const res = await tenantFetch("/api/morning-brief");
+        if (res.ok) {
+            const data = await res.json();
+            if (display) {
+                const sales = data.sales_summary || {};
+                const inv = data.inventory_status || {};
+                const tasks = data.pending_tasks || {};
+                display.textContent = `🌅 Executive Morning Briefing [${data.tenant_id}] (${data.briefing_date})
+
+📊 Financial Performance:
+• Gross Revenue: $${Number(sales.total_revenue || 0).toFixed(2)} (${sales.total_orders || 0} transactions)
+• Average Order Value (AOV): $${Number(sales.average_order_value || 0).toFixed(2)}
+
+📦 Inventory Telemetry:
+• Low Stock Alerts: ${inv.low_stock_count || 0} product(s) below threshold
+• Catalog Health: ${inv.low_stock_count === 0 ? "All items healthy" : "Restock required"}
+
+📋 Operational Tasks Queue:
+• Pending Tasks: ${tasks.total_tasks || 0} action items for today
+
+🤖 Aero AI Recommendations:
+• Proactively audit restock replenishment for high-velocity items.
+• Review employee shift coverage and dispatch daily digest to team channels.`;
+            }
+        }
+    } catch (e) {
+        if (display) display.textContent = "Error loading morning briefing.";
+    }
+}
+
+async function dispatchMorningBrief(notify = true) {
+    try {
+        showToast("Dispatching briefing to channels...", "🚀");
+        const res = await tenantFetch("/api/cron/daily-report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tenant_id: currentTenantId, channel: "all", notify: notify })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast("Dispatched morning brief to Slack, WhatsApp & Email!", "✅");
+            await fetchMorningBrief();
+        } else {
+            alert(`Dispatch failed: ${data.detail || 'Error'}`);
+        }
+    } catch (e) {
+        alert("Server connection failed.");
     }
 }

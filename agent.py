@@ -24,6 +24,15 @@ from tools import (
     create_sales_order,
     update_task_status,
     add_new_product,
+    log_operational_expense,
+    get_expense_summary,
+    list_expenses,
+    schedule_employee_shift,
+    list_employee_shifts,
+    get_employee_productivity,
+    add_customer_review,
+    get_customer_feedback_report,
+    dispatch_morning_briefing,
     AGENT_TOOLS_REGISTRY,
     DEFAULT_TENANT
 )
@@ -35,11 +44,12 @@ You are 'Aero', an executive AI Personal Productivity Assistant deployed on Clou
 You assist with:
 1. Daily sales performance tracking, order summaries, and top-selling revenue metrics.
 2. Real-time inventory monitoring, identifying low-stock alerts, and placing restock orders.
-3. Generating daily morning operational briefings.
-4. Managing operational tasks and action items.
+3. Generating daily morning operational briefings and automated multi-channel cron dispatches.
+4. Managing operational tasks, employee shifts, and team productivity tracking.
 5. Creating customer sales orders and updating stock in real time.
 6. Forecasting 7-day and 30-day sales demand and stockout risks.
-7. Analyzing customer feedback and dispatching webhook notifications.
+7. Tracking expenses, Cost of Goods Sold (COGS), P&L gross/net profit margins.
+8. Analyzing customer feedback, ratings, sentiment, and Net Promoter Score (NPS).
 
 Response Formatting Guidelines:
 - Always format outputs with clean, executive-grade visual hierarchy.
@@ -162,6 +172,71 @@ def format_daily_briefing_reply(brief: Dict[str, Any], tenant_id: str) -> str:
     )
 
 
+def format_expense_summary_reply(summary: Dict[str, Any], tenant_id: str) -> str:
+    lines = [
+        f"💰 **Financial P&L & Expense Breakdown [{tenant_id}]**",
+        f"• **Gross Revenue:** **${summary.get('gross_revenue', 0.0):.2f}** ({summary.get('order_count', 0)} orders)",
+        f"• **Cost of Goods Sold (COGS):** **${summary.get('cogs', 0.0):.2f}**",
+        f"• **Gross Profit:** **${summary.get('gross_profit', 0.0):.2f}** ({summary.get('gross_margin_pct', 0.0)}% Margin)",
+        f"• **Operating Expenses (OpEx):** **${summary.get('total_operating_expenses', 0.0):.2f}**",
+        f"• **Net Operating Profit:** **${summary.get('net_profit', 0.0):.2f}** ({summary.get('net_margin_pct', 0.0)}% Net Margin)\n"
+    ]
+    categories = summary.get("expense_categories", {})
+    if categories:
+        lines.append("📊 **OpEx Categories Breakdown:**")
+        for cat, amt in categories.items():
+            lines.append(f"• **{cat}:** ${amt:.2f}")
+    return "\n".join(lines)
+
+
+def format_shifts_reply(shifts_data: Dict[str, Any], tenant_id: str) -> str:
+    shifts = shifts_data.get("shifts", [])
+    if not shifts:
+        return f"👥 **Employee Shifts [{tenant_id}]:** No scheduled shifts recorded."
+    lines = [
+        f"👥 **Employee Shift Roster [{tenant_id}] ({len(shifts)} shifts)**",
+        "*Current scheduled shift allocations:*\n"
+    ]
+    for s in shifts:
+        lines.append(f"• 👤 **{s['employee_name']}** — *{s['role']}* ({s['start_time']} - {s['end_time']}) [{s['status']}]")
+    return "\n".join(lines)
+
+
+def format_productivity_reply(prod: Dict[str, Any], tenant_id: str) -> str:
+    lines = [
+        f"📈 **Team Productivity & Operations Scorecard [{tenant_id}]**",
+        f"• **Total Action Items:** **{prod.get('total_tasks', 0)}**",
+        f"• **Completed Tasks:** **{prod.get('completed_tasks', 0)}** ({prod.get('team_completion_rate_pct', 0.0)}% Completion Rate)",
+        f"• **Overdue Items:** **{prod.get('overdue_tasks', 0)}**\n"
+    ]
+    breakdown = prod.get("assignee_breakdown", {})
+    if breakdown:
+        lines.append("👤 **Assignee Breakdown:**")
+        for assignee, stats in breakdown.items():
+            lines.append(f"• **{assignee}:** {stats.get('completed', 0)}/{stats.get('assigned', 0)} completed ({stats.get('pending', 0)} pending)")
+    return "\n".join(lines)
+
+
+def format_feedback_reply(feedback_data: Dict[str, Any], tenant_id: str) -> str:
+    avg = feedback_data.get("average_rating", 0.0)
+    nps = feedback_data.get("nps_score", 0)
+    total = feedback_data.get("total_reviews", 0)
+    sentiment = feedback_data.get("sentiment_breakdown", {})
+    insights = feedback_data.get("actionable_insights", [])
+
+    lines = [
+        f"⭐ **Customer Sentiment & Feedback Intelligence [{tenant_id}]**",
+        f"• **Average Rating:** **{avg}/5.0** ({total} verified reviews)",
+        f"• **Net Promoter Score (NPS):** **+{nps}**",
+        f"• **Sentiment Distribution:** 🟢 {sentiment.get('POSITIVE', 0)} Positive | 🟡 {sentiment.get('NEUTRAL', 0)} Neutral | 🔴 {sentiment.get('NEGATIVE', 0)} Negative\n"
+    ]
+    if insights:
+        lines.append("💡 **Actionable Operational Insights:**")
+        for ins in insights:
+            lines.append(f"• {ins}")
+    return "\n".join(lines)
+
+
 class ProductivityAgent:
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -213,6 +288,15 @@ class ProductivityAgent:
             create_sales_order,
             update_task_status,
             add_new_product,
+            log_operational_expense,
+            get_expense_summary,
+            list_expenses,
+            schedule_employee_shift,
+            list_employee_shifts,
+            get_employee_productivity,
+            add_customer_review,
+            get_customer_feedback_report,
+            dispatch_morning_briefing,
         ]
 
         system_with_tenant = f"{SYSTEM_INSTRUCTION}\nActive Business Tenant: [{tenant_id}]. Always include the tenant tag [{tenant_id}] in the report header."
@@ -305,14 +389,29 @@ class ProductivityAgent:
             reply = format_daily_briefing_reply(brief, tenant_id)
 
         elif clean_msg in ("6", "option 6", "opt 6") or clean_msg.startswith("6 "):
-            feedback_data = analyze_customer_feedback(tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "analyze_customer_feedback", "args": {"tenant_id": tenant_id}, "result": feedback_data})
-            reply = f"⭐ **Customer Sentiment & Feedback [{tenant_id}]:** Rating **{feedback_data['average_rating']}/5.0** ({feedback_data['satisfaction_rate']} positive satisfaction).\nSummary: {feedback_data.get('summary', 'Strong customer fulfillment ratings.')}"
+            fb_report = get_customer_feedback_report(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "get_customer_feedback_report", "args": {"tenant_id": tenant_id}, "result": fb_report})
+            reply = format_feedback_reply(fb_report, tenant_id)
 
         elif clean_msg in ("7", "option 7", "opt 7") or clean_msg.startswith("7 "):
-            webhook_res = trigger_operational_webhook_alert(channel="slack", tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "trigger_operational_webhook_alert", "args": {"channel": "slack", "tenant_id": tenant_id}, "result": webhook_res})
-            reply = f"🚀 **Webhook Dispatched [{tenant_id}]:** Alert sent to **#slack**."
+            summary = get_expense_summary(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "get_expense_summary", "args": {"tenant_id": tenant_id}, "result": summary})
+            reply = format_expense_summary_reply(summary, tenant_id)
+
+        elif clean_msg in ("8", "option 8", "opt 8") or clean_msg.startswith("8 "):
+            shifts_res = list_employee_shifts(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "list_employee_shifts", "args": {"tenant_id": tenant_id}, "result": shifts_res})
+            reply = format_shifts_reply(shifts_res, tenant_id)
+
+        elif clean_msg in ("9", "option 9", "opt 9") or clean_msg.startswith("9 "):
+            prod_res = get_employee_productivity(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "get_employee_productivity", "args": {"tenant_id": tenant_id}, "result": prod_res})
+            reply = format_productivity_reply(prod_res, tenant_id)
+
+        elif clean_msg in ("10", "option 10", "opt 10") or clean_msg.startswith("10 "):
+            webhook_res = dispatch_morning_briefing(channels="slack,whatsapp,email", tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "dispatch_morning_briefing", "args": {"channels": "slack,whatsapp,email", "tenant_id": tenant_id}, "result": webhook_res})
+            reply = f"🚀 **Morning Briefing Dispatched [{tenant_id}]:** Dispatched via multi-channel connectors to Slack, WhatsApp & Email."
 
         # 2. Demand Forecasting & Velocity (High priority keyword match)
         elif any(k in msg for k in ["forecast", "demand", "velocity", "stockout risk", "predict", "future sales"]):
@@ -321,19 +420,58 @@ class ProductivityAgent:
             reply = format_forecast_reply(forecast_data, tenant_id)
 
         # 3. Customer Reviews & Feedback
-        elif any(k in msg for k in ["review", "feedback", "rating", "satisfaction", "sentiment", "customer sentiment"]):
-            feedback_data = analyze_customer_feedback(tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "analyze_customer_feedback", "args": {"tenant_id": tenant_id}, "result": feedback_data})
-            reply = f"⭐ **Customer Sentiment & Feedback [{tenant_id}]:** Rating **{feedback_data['average_rating']}/5.0** ({feedback_data['satisfaction_rate']} positive satisfaction).\nSummary: {feedback_data.get('summary', 'Strong customer fulfillment ratings.')}"
+        elif any(k in msg for k in ["review", "feedback", "rating", "satisfaction", "sentiment", "customer sentiment", "nps"]):
+            fb_report = get_customer_feedback_report(tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "get_customer_feedback_report", "args": {"tenant_id": tenant_id}, "result": fb_report})
+            reply = format_feedback_reply(fb_report, tenant_id)
 
-        # 4. Webhook Dispatch & Slack Alerts
+        # 4. Expenses & P&L Analysis
+        elif any(k in msg for k in ["expense", "spending", "cogs", "p&l", "profit", "margins", "cost", "opex", "financial summary", "vendor breakdown"]):
+            # Check if user wants to log an expense
+            if any(k in msg for k in ["log expense", "add expense", "record expense"]):
+                amount_match = re.search(r"\$?(\d+(?:\.\d{1,2})?)", user_message)
+                amount = float(amount_match.group(1)) if amount_match else 50.0
+                cat_match = re.search(r"(?:for|category|under)\s+([A-Za-z\s]+?)(?:\s+\$|\s+amount|\.|$)", user_message, re.IGNORECASE)
+                category = cat_match.group(1).strip() if cat_match else "Operations"
+                res = log_operational_expense(category=category, description=user_message, amount=amount, tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "log_operational_expense", "args": {"category": category, "description": user_message, "amount": amount, "tenant_id": tenant_id}, "result": res})
+                reply = f"💵 **Expense Recorded [{tenant_id}]:** Logged **${amount:.2f}** under **{category}**."
+            else:
+                summary = get_expense_summary(tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "get_expense_summary", "args": {"tenant_id": tenant_id}, "result": summary})
+                reply = format_expense_summary_reply(summary, tenant_id)
+
+        # 5. Employee Shifts & Team Productivity
+        elif any(k in msg for k in ["shift", "roster", "staff", "employee", "hours scheduled", "schedule shift", "productivity", "completion rate"]):
+            if any(k in msg for k in ["schedule shift", "new shift", "assign shift"]):
+                name_match = re.search(r"(?:for|employee)\s+([A-Za-z\s]+?)(?:\s+as|\s+role|\s+from|\.|$)", user_message, re.IGNORECASE)
+                name = name_match.group(1).strip() if name_match else "Staff Member"
+                res = schedule_employee_shift(employee_name=name, role="Associate", tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "schedule_employee_shift", "args": {"employee_name": name, "role": "Associate", "tenant_id": tenant_id}, "result": res})
+                reply = f"👤 **Shift Scheduled [{tenant_id}]:** Assigned **{name}** as Associate (08:00 - 17:00)."
+            elif any(k in msg for k in ["productivity", "scorecard", "performance"]):
+                prod_res = get_employee_productivity(tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "get_employee_productivity", "args": {"tenant_id": tenant_id}, "result": prod_res})
+                reply = format_productivity_reply(prod_res, tenant_id)
+            else:
+                shifts_res = list_employee_shifts(tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "list_employee_shifts", "args": {"tenant_id": tenant_id}, "result": shifts_res})
+                reply = format_shifts_reply(shifts_res, tenant_id)
+
+        # 6. Morning Briefing Multi-Channel Webhook Dispatch
+        elif any(k in msg for k in ["morning brief", "daily brief", "cron dispatch", "briefing dispatch"]) or (("briefing" in msg or "brief" in msg) and any(k in msg for k in ["dispatch", "send", "webhook", "channels"])):
+            webhook_res = dispatch_morning_briefing(channels="slack,whatsapp,email", tenant_id=tenant_id)
+            tool_calls_executed.append({"tool": "dispatch_morning_briefing", "args": {"channels": "slack,whatsapp,email", "tenant_id": tenant_id}, "result": webhook_res})
+            reply = f"🚀 **Morning Briefing Dispatched [{tenant_id}]:** Dispatched via multi-channel connectors to Slack, WhatsApp & Email."
+
+        # 7. Webhook Dispatch & Slack Alerts
         elif any(k in msg for k in ["webhook", "slack", "dispatch", "send alert", "notify slack"]):
             channel = "slack"
             webhook_res = trigger_operational_webhook_alert(channel=channel, message=user_message, tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "trigger_operational_webhook_alert", "args": {"channel": channel, "tenant_id": tenant_id}, "result": webhook_res})
             reply = f"🚀 **Webhook Dispatched [{tenant_id}]:** Operational alert sent to **#{channel}**."
 
-        # 5. Create / Record New Order
+        # 7. Create / Record New Order
         elif any(k in msg for k in ["create order", "new order", "record order", "record sale", "buying", "buys", "place order"]):
             sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
             sku = sku_match.group(1).upper() if sku_match else "SKU-101"
@@ -355,7 +493,7 @@ class ProductivityAgent:
             else:
                 reply = f"❌ **Order Failed:** {order_res.get('error', 'Error creating order')}"
 
-        # 6. Add / Register New Product
+        # 8. Add / Register New Product
         elif any(k in msg for k in ["add product", "create product", "new product", "register product"]):
             sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
             sku = sku_match.group(1).upper() if sku_match else f"SKU-{datetime.datetime.now().strftime('%M%S')}"
@@ -382,7 +520,7 @@ class ProductivityAgent:
             else:
                 reply = f"❌ **Product Registration Failed:** {res.get('error', 'Error adding product')}"
 
-        # 7. Reorder & Restock Stock
+        # 9. Reorder & Restock Stock
         elif any(k in msg for k in ["reorder", "restock", "purchase order", "replenish"]):
             sku_match = re.search(r"([A-Za-z]+-\d+)", user_message)
             sku = sku_match.group(1).upper() if sku_match else None
@@ -403,19 +541,24 @@ class ProductivityAgent:
             else:
                 reply = "Please specify SKU to reorder (e.g. `Reorder 25 units of SKU-101`)."
 
-        # 7. Daily Executive Briefing
-        elif any(k in msg for k in ["briefing", "morning brief", "overview", "standup", "digest"]):
-            brief = generate_daily_briefing(tenant_id=tenant_id)
-            tool_calls_executed.append({"tool": "generate_daily_briefing", "args": {"tenant_id": tenant_id}, "result": brief})
-            reply = format_daily_briefing_reply(brief, tenant_id)
+        # 10. Daily Executive Briefing & Cron
+        elif any(k in msg for k in ["briefing", "morning brief", "overview", "standup", "digest", "cron", "dispatch report"]):
+            if any(k in msg for k in ["dispatch", "webhook", "send", "channels"]):
+                dispatch_res = dispatch_morning_briefing(channels="slack,whatsapp,email", tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "dispatch_morning_briefing", "args": {"channels": "slack,whatsapp,email", "tenant_id": tenant_id}, "result": dispatch_res})
+                reply = f"🌅 **Morning Briefing Generated & Dispatched [{tenant_id}]:** Sent to configured channels.\n" + format_daily_briefing_reply(dispatch_res.get("report", generate_daily_briefing(tenant_id=tenant_id)), tenant_id)
+            else:
+                brief = generate_daily_briefing(tenant_id=tenant_id)
+                tool_calls_executed.append({"tool": "generate_daily_briefing", "args": {"tenant_id": tenant_id}, "result": brief})
+                reply = format_daily_briefing_reply(brief, tenant_id)
 
-        # 8. Low Stock & Inventory Thresholds
+        # 11. Low Stock & Inventory Thresholds
         elif any(k in msg for k in ["inventory", "stock", "low stock", "catalog", "warehouse", "threshold", "safety stock"]):
             inv = get_inventory_alerts(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "get_inventory_alerts", "args": {"tenant_id": tenant_id}, "result": inv})
             reply = format_inventory_alerts_reply(inv, tenant_id)
 
-        # 9. Tasks & Action Items
+        # 12. Tasks & Action Items
         elif any(k in msg for k in ["task", "todo", "schedule", "action item"]):
             tasks_data = list_daily_tasks(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "list_daily_tasks", "args": {"tenant_id": tenant_id}, "result": tasks_data})
@@ -423,7 +566,7 @@ class ProductivityAgent:
             for t in tasks_data["tasks"]:
                 reply += f"- **[{t['priority']}]** {t['title']} ({t['status']})\n"
 
-        # 10. Sales & Revenue Telemetry
+        # 13. Sales & Revenue Telemetry
         elif any(k in msg for k in ["sale", "revenue", "income", "money", "sold", "earnings", "pos telemetry"]):
             sales = get_daily_sales_summary(tenant_id=tenant_id)
             tool_calls_executed.append({"tool": "get_daily_sales_summary", "args": {"tenant_id": tenant_id}, "result": sales})
@@ -439,8 +582,11 @@ class ProductivityAgent:
                 "3. 📈 **Demand Forecast**: *'3'* or *'Forecast demand'*\n"
                 "4. ⚡ **Automate Restock**: *'4'* or *'Reorder SKU-101'*\n"
                 "5. 🌅 **Executive Briefing**: *'5'* or *'Morning briefing'*\n"
-                "6. ⭐ **Customer Feedback**: *'6'* or *'Customer reviews'*\n"
-                "7. 🔔 **Webhook Dispatch**: *'7'* or *'Send alert to Slack'*"
+                "6. ⭐ **Customer Feedback & NPS**: *'6'* or *'Customer reviews'*\n"
+                "7. 💰 **Expense & P&L Tracker**: *'7'* or *'Expense summary'*\n"
+                "8. 👥 **Employee Shifts**: *'8'* or *'Employee shifts'*\n"
+                "9. 📈 **Team Productivity**: *'9'* or *'Productivity scorecard'*\n"
+                "10. 🚀 **Dispatch Briefing Cron**: *'10'* or *'Dispatch briefing to channels'*"
             )
 
         return {

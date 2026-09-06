@@ -448,6 +448,135 @@ def add_new_product(
     }
 
 
+def log_operational_expense(
+    category: str,
+    description: str,
+    amount: float,
+    date: Optional[str] = None,
+    payment_method: str = "CREDIT_CARD",
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Logs an operational expense for the tenant (OpEx, COGS, Marketing, Utilities, etc.)."""
+    from modules.expense_tracker import ExpenseTracker
+    tracker = ExpenseTracker(tenant_id=tenant_id)
+    return tracker.log_expense(
+        category=category,
+        description=description,
+        amount=amount,
+        date=date,
+        payment_method=payment_method
+    )
+
+
+def get_expense_summary(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Calculates comprehensive P&L for the tenant including Gross Revenue, COGS, Gross Profit, Total OpEx, Net Profit, and Profit Margin %."""
+    from modules.expense_tracker import ExpenseTracker
+    tracker = ExpenseTracker(tenant_id=tenant_id)
+    return tracker.get_financial_summary(start_date=start_date, end_date=end_date)
+
+
+def list_expenses(
+    date: Optional[str] = None,
+    category: Optional[str] = None,
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Lists operational expenses for the tenant, optionally filtered by date or category."""
+    from modules.expense_tracker import ExpenseTracker
+    tracker = ExpenseTracker(tenant_id=tenant_id)
+    expenses = tracker.get_expenses(date=date, category=category)
+    total_amount = sum(float(e.get("amount", 0.0)) for e in expenses)
+    return {
+        "tenant_id": tenant_id,
+        "count": len(expenses),
+        "total_amount": round(total_amount, 2),
+        "expenses": expenses
+    }
+
+
+def schedule_employee_shift(
+    employee_name: str,
+    role: str,
+    shift_date: Optional[str] = None,
+    start_time: str = "08:00",
+    end_time: str = "17:00",
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Schedules an employee shift for the tenant."""
+    from modules.employee_tasks import EmployeeTaskManager
+    manager = EmployeeTaskManager(tenant_id=tenant_id)
+    return manager.schedule_shift(
+        employee_name=employee_name,
+        role=role,
+        shift_date=shift_date,
+        start_time=start_time,
+        end_time=end_time
+    )
+
+
+def list_employee_shifts(
+    shift_date: Optional[str] = None,
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Retrieves scheduled employee shifts for the tenant."""
+    from modules.employee_tasks import EmployeeTaskManager
+    manager = EmployeeTaskManager(tenant_id=tenant_id)
+    shifts = manager.list_shifts(shift_date=shift_date)
+    return {
+        "tenant_id": tenant_id,
+        "count": len(shifts),
+        "shifts": shifts
+    }
+
+
+def get_employee_productivity(tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
+    """Aggregates tasks completed vs pending by assignee/employee and calculates team productivity metrics."""
+    from modules.employee_tasks import EmployeeTaskManager
+    manager = EmployeeTaskManager(tenant_id=tenant_id)
+    return manager.get_productivity_report()
+
+
+def add_customer_review(
+    customer_name: str,
+    rating: int,
+    feedback_text: str,
+    source: str = "Google Reviews",
+    review_date: Optional[str] = None,
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Adds a customer review and performs sentiment classification."""
+    from modules.customer_feedback import CustomerFeedbackAnalyzer
+    analyzer = CustomerFeedbackAnalyzer(tenant_id=tenant_id)
+    return analyzer.add_review(
+        customer_name=customer_name,
+        rating=rating,
+        feedback_text=feedback_text,
+        source=source,
+        review_date=review_date
+    )
+
+
+def get_customer_feedback_report(tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
+    """Computes average rating, Net Promoter Score (NPS), sentiment distribution, and actionable feedback insights."""
+    from modules.customer_feedback import CustomerFeedbackAnalyzer
+    analyzer = CustomerFeedbackAnalyzer(tenant_id=tenant_id)
+    return analyzer.get_feedback_report()
+
+
+def dispatch_morning_briefing(
+    channels: str = "slack",
+    tenant_id: str = DEFAULT_TENANT
+) -> Dict[str, Any]:
+    """Dispatches executive morning briefing report to webhook channels (Slack, WhatsApp, Email)."""
+    from integrations.notification_connectors import MultiChannelDispatcher
+    dispatcher = MultiChannelDispatcher()
+    channel_list = [c.strip().lower() for c in channels.split(",") if c.strip()]
+    return dispatcher.dispatch_daily_report(tenant_id=tenant_id, channels=channel_list or ["slack"])
+
+
 AGENT_TOOLS_REGISTRY = {
     "get_daily_sales_summary": get_daily_sales_summary,
     "get_inventory_alerts": get_inventory_alerts,
@@ -462,4 +591,13 @@ AGENT_TOOLS_REGISTRY = {
     "create_sales_order": create_sales_order,
     "update_task_status": update_task_status,
     "add_new_product": add_new_product,
+    "log_operational_expense": log_operational_expense,
+    "get_expense_summary": get_expense_summary,
+    "list_expenses": list_expenses,
+    "schedule_employee_shift": schedule_employee_shift,
+    "list_employee_shifts": list_employee_shifts,
+    "get_employee_productivity": get_employee_productivity,
+    "add_customer_review": add_customer_review,
+    "get_customer_feedback_report": get_customer_feedback_report,
+    "dispatch_morning_briefing": dispatch_morning_briefing,
 }

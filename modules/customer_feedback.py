@@ -6,11 +6,11 @@ identifies common operational praise/pain points, and generates actionable recom
 
 import datetime
 from typing import List, Dict, Any, Optional
-from database import query_all, query_one, get_db_connection
+from database import query_all, query_one, execute_mutation, get_db_connection
 
 
 class CustomerFeedbackAnalyzer:
-    """Manages tenant-isolated customer reviews, sentiment trends, and NPS scoring."""
+    """Processes reviews, analyzes customer satisfaction, and computes Net Promoter Score (NPS)."""
 
     def __init__(self, tenant_id: str = "acme-electronics"):
         self.tenant_id = tenant_id
@@ -35,23 +35,17 @@ class CustomerFeedbackAnalyzer:
         else:
             sentiment = "NEGATIVE"
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
+        execute_mutation(
             """
             INSERT INTO customer_reviews (tenant_id, review_date, customer_name, rating, sentiment, feedback_text, source)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (self.tenant_id, r_date, customer_name.strip(), rating_int, sentiment, feedback_text.strip(), source)
         )
-        review_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
 
         return {
             "success": True,
             "tenant_id": self.tenant_id,
-            "review_id": review_id,
             "customer_name": customer_name,
             "rating": rating_int,
             "sentiment": sentiment,
@@ -65,10 +59,15 @@ class CustomerFeedbackAnalyzer:
         Computes average rating, Net Promoter Score (NPS), sentiment distribution,
         and extracts key positive and negative themes.
         """
-        reviews = query_all(
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
             "SELECT * FROM customer_reviews WHERE tenant_id = ? ORDER BY review_date DESC",
             (self.tenant_id,)
         )
+        rows = cursor.fetchall()
+        conn.close()
+        reviews = [dict(r) for r in rows]
 
         total_reviews = len(reviews)
         if total_reviews == 0:
